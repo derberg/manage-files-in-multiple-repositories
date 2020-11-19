@@ -1,0 +1,44 @@
+{
+  "name": "global-actions-support",
+  "version": "0.0.1",
+  "description": "This action introduces support for global actions. Global actions are the one you update in just one repo and they are automatically updated in other repositories.",
+  "main": "lib/index.js",
+  "scripts": {
+    "start": "node lib/index.js",
+    "package": "ncc build lib/index.js -o dist",
+    "gitAdd": "git add dist/index.js",
+    "gen-readme-toc": "markdown-toc -i README.md",
+    "lint": "eslint --max-warnings 0 .",
+    "lint-fix": "eslint --fix .",
+    "test": "npm run lint && jest"
+  },
+  "pre-commit": [
+    "package",
+    "gitAdd"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/derberg/global-actions-support.git"
+  },
+  "author": "MG",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/derberg/global-actions-support/issues"
+  },
+  "homepage": "https://github.com/derberg/global-actions-support#readme",
+  "dependencies": {
+    "@actions/core": "^1.2.6",
+    "@actions/github": "^4.0.0",
+    "klaw": "^3.0.0",
+    "markdown-toc": "^1.2.0",
+    "simple-git": "^2.20.1"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.23.0",
+    "eslint": "^7.7.0",
+    "eslint-plugin-jest": "^23.20.0",
+    "eslint-plugin-sonarjs": "^0.5.0",
+    "jest": "^26.4.1",
+    "pre-commit": "^1.2.2"
+  }
+}
