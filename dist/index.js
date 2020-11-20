@@ -5255,8 +5255,15 @@ async function run() {
   const gitHubKey = process.env.GITHUB_TOKEN || core.getInput('github_token', { required: true });
 
   const octokit = github.getOctokit(gitHubKey);
+  const commitId = eventPayload.commits[0].id;
 
-  console.log(JSON.stringify(eventPayload, null, 4));
+  const {data: res} = await octokit.repos.getCommit({
+    owner: 'lukasz-lab',
+    repo: '.github',
+    ref: commitId
+  });
+
+  console.log(res);
 }
 
 run();
