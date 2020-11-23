@@ -11635,6 +11635,7 @@ async function run() {
   const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
   const octokit = github.getOctokit(gitHubKey);
   const commitId = eventPayload.commits[0].id;
+  const ignoredRepositories = [repo];
 
   const commitFiles = await getCommit(octokit, commitId, owner, repo);
   const changedFilename = commitFiles[0].filename;
@@ -11644,10 +11645,14 @@ async function run() {
   const reposList = await getReposList(octokit, owner);
 
   for (const {url, name, id} of reposList) {
-    const dir = path.join(process.cwd(), './clones', name);
+    if (ignoredRepositories.includes(name)) return;
+
+    const dir = __webpack_require__.ab + "clones/" + name;
     await mkdir(dir, {recursive: true});
+    
     const branchName = `bot/update-global-workflow-${commitId}`;
     const git = simpleGit({baseDir: dir});
+
     await clone(url, dir, git);
     await createBranch(branchName, git);
     await copy(path.join(process.cwd(),changedFilename), path.join(dir,changedFilename));
