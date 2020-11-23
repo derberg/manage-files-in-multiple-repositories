@@ -1,12 +1,12 @@
-name : 'Global Actions Support'
-description: 'This action introduces support for global actions. Global actions are the one you update in just one repo and they are automatically updated in other repositories.'
+name: "Global Actions Support"
+description: "This action introduces support for global actions. Global actions are the one you update in just one repo and they are automatically updated in other repositories."
 inputs:
   github_token:
-    description: 'Token to use GitHub API.'
+    description: "Token to use GitHub API."
     required: true
 runs:
-  using: 'node12'
-  main: 'dist/index.js'
+  using: "node12"
+  main: "dist/index.js"
 branding:
-  icon: 'link'
-  color: 'blue'
+  icon: "link"
+  color: "blue"

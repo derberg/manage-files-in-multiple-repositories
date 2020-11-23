@@ -1660,7 +1660,7 @@ exports.Context = Context;
 /***/ 119:
 /***/ (function(module) {
 
-module.exports = { getReposList, createPr, getCommit };
+module.exports = { getReposList, createPr, getCommitFiles };
 
 async function getReposList(octokit, owner) {
   const reposListQuery = `
@@ -1734,7 +1734,7 @@ async function createPr(octokit, branchName, id) {
   return pullRequestUrl;
 }
 
-async function getCommit(octokit, commitId, owner, repo) {
+async function getCommitFiles(octokit, commitId, owner, repo) {
   const { data: { files } } = await octokit.repos.getCommit({
     owner,
     repo,
@@ -6062,6 +6062,37 @@ function parseStringResponse(result, parsers, text) {
 }
 exports.parseStringResponse = parseStringResponse;
 //# sourceMappingURL=task-parser.js.map
+
+/***/ }),
+
+/***/ 374:
+/***/ (function(module) {
+
+module.exports = {createBranch, clone, push};
+
+async function createBranch(branchName, git) {
+  return await git
+    .checkout(`-b${branchName}`);
+}
+
+async function clone(remote, dir, git) {
+  return await git
+    .clone(remote, dir, {'--depth': 1});
+}
+
+async function push(token, owner, url, branchName, message, git) {
+  const authanticatedUrl = (token, url, owner) => {
+    const arr = url.split('//');
+    return `https://${owner}:${token}@${arr[arr.length - 1]}`;
+  };
+
+  return await git
+    .add('./*')
+    .commit(message)
+    .addRemote('auth', authanticatedUrl(token, url, owner))
+    .push(['-u', 'auth', branchName]);
+}
+  
 
 /***/ }),
 
@@ -11623,39 +11654,39 @@ const core = __webpack_require__(186);
 const simpleGit = __webpack_require__(477);
 const path = __webpack_require__(622);
 const { mkdir } = __webpack_require__(747).promises;
-const { copy } = __webpack_require__(630);
 
-const { createBranch, clone, push } = __webpack_require__(918);
-const { getReposList, createPr, getCommit } = __webpack_require__(119);
+const { createBranch, clone, push } = __webpack_require__(374);
+const { getReposList, createPr } = __webpack_require__(119);
+const { getListModifiedFiles, copyChangedFiles } = __webpack_require__(918);
 
-const eventPayload = require(process.env.GITHUB_EVENT_PATH || '../test/fake-event.json');
+const eventPayload = require(process.env.GITHUB_EVENT_PATH);
 
 async function run() {
   const gitHubKey = process.env.GITHUB_TOKEN || core.getInput('github_token', { required: true });
   const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
   const octokit = github.getOctokit(gitHubKey);
+  //TODO for now this action is hardcoded to always get commit id of the first commit on the list
   const commitId = eventPayload.commits[0].id;
   const ignoredRepositories = [repo];
+  const modifiedFiles = await getListModifiedFiles(octokit, commitId, owner, repo);
 
-  const commitFiles = await getCommit(octokit, commitId, owner, repo);
-  const changedFilename = commitFiles[0].filename;
-
-  if (!changedFilename.includes('.github/workflows')) return;
+  if (!modifiedFiles.length) 
+    return core.info('No changes to workflows were detected.');
 
   const reposList = await getReposList(octokit, owner);
 
   for (const {url, name, id} of reposList) {
     if (ignoredRepositories.includes(name)) return;
 
-    const dir = __webpack_require__.ab + "clones/" + name;
+    const dir = path.join(process.cwd(), './clones', name);
     await mkdir(dir, {recursive: true});
-    
+
     const branchName = `bot/update-global-workflow-${commitId}`;
     const git = simpleGit({baseDir: dir});
 
     await clone(url, dir, git);
     await createBranch(branchName, git);
-    await copy(path.join(process.cwd(),changedFilename), path.join(dir,changedFilename));
+    await copyChangedFiles(modifiedFiles, dir);
     await push(gitHubKey, owner, url, branchName, 'Update global workflows', git);
 
     const pullRequestUrl = await createPr(octokit, branchName, id);
@@ -12665,33 +12696,47 @@ module.exports = {
 /***/ }),
 
 /***/ 918:
-/***/ (function(module) {
+/***/ (function(module, __unusedexports, __webpack_require__) {
 
-module.exports = {createBranch, clone, push};
+const { copy } = __webpack_require__(630);
+const path = __webpack_require__(622);
 
-async function createBranch(branchName, git) {
-  return await git
-    .checkout(`-b${branchName}`);
+const { getCommitFiles } = __webpack_require__(119);
+
+module.exports = { getListModifiedFiles, copyChangedFiles };
+
+/**
+ * @param  {Object} octokit GitHub API client instance
+ * @param  {Object} eventPayload https://developer.github.com/webhooks/event-payloads/#push
+ * @param  {String} owner org or user name
+ * @param  {String} repo repo name
+ * 
+ * @returns {Array<String>} list of filepaths of modified files
+ */
+async function getListModifiedFiles(octokit, commitId, owner, repo) {
+  const commitFiles = await getCommitFiles(octokit, commitId, owner, repo);
+  const changedFiles = [];
+
+  for (const { filename } of commitFiles) {
+    //TODO for now this action is hardcoded to only monitor changes in this directory because it is supposed to support global workflows and no other files
+    //This can be changed if there is a well described use case
+    if (!filename.includes('.github/workflows')) return;
+
+    changedFiles.push(filename);
+  }
+
+  return changedFiles;
 }
 
-async function clone(remote, dir, git) {
-  return await git
-    .clone(remote, dir, {'--depth': 1});
+/**
+ * @param  {Array} filesList list of files that need to be copied
+ * @param  {String} destination where file should be copied
+ */
+async function copyChangedFiles(filesList, destination) {
+  await Promise.all(filesList.map(async filepath => {
+    return await copy(path.join(process.cwd(), filepath), path.join(destination, filepath));
+  }));
 }
-
-async function push(token, owner, url, branchName, message, git) {
-  const authanticatedUrl = (token, url, owner) => {
-    const arr = url.split('//');
-    return `https://${owner}:${token}@${arr[arr.length - 1]}`;
-  };
-
-  return await git
-    .add('./*')
-    .commit(message)
-    .addRemote('auth', authanticatedUrl(token, url, owner))
-    .push(['-u', 'auth', branchName]);
-}
-  
 
 /***/ }),
 
