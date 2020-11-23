@@ -10,6 +10,5 @@ GitHub Action that introduces support for global actions. Global actions are the
 - `bot/update-workflow` make it better, add commit id from .github repository, the one that triggered workflow update
 - make sure to always ignore the repository in which the action runs, so if action is used in .github then this repo should be ignored when replicating the change
 - allow user to configure/provide a custom message for the commit
-- lukasz-lab is hardcoded in many locations
 - remember to put in docs info about required token scopes, like repo and workflow
 - master/main issue for PRs

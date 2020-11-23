@@ -1657,6 +1657,95 @@ exports.Context = Context;
 
 /***/ }),
 
+/***/ 119:
+/***/ (function(module) {
+
+module.exports = { getReposList, createPr, getCommit };
+
+async function getReposList(octokit, owner) {
+  const reposListQuery = `
+    query getReposList($owner: String!){
+        user(login: $owner) {
+            repositories(first: 100) {
+                nodes {
+                    ... on Repository {
+                        name
+                        url
+                        id
+                    }
+                }
+            }
+        }
+        organization(login: $owner) {
+            repositories(first: 100) {
+                nodes {
+                    ... on Repository {
+                        name
+                        url
+                        id
+                    }
+                }
+            }
+        }
+    }  
+  `;
+
+  const reposListVariables = {
+    owner
+  };
+  
+  /*
+    Handling it in such a strange way to always return from catch as I could not find
+    a better way of getting repos list either from users or organizations
+  */
+  try {
+    await octokit.graphql(reposListQuery, reposListVariables);
+  } catch (error) {
+    const org = error.data.user;
+    const user = error.data.organization;
+
+    return org ? org.repositories.nodes : user.repositories.nodes;
+  }
+}
+
+async function createPr(octokit, branchName, id) {
+  const createPrMutation =
+    `mutation createPr($branchName: String!, $id: String!) {
+      createPullRequest(input: {
+        baseRefName: "master",
+        headRefName: $branchName,
+        title: "Update global workflows",
+        repositoryId: $id
+      }){
+        pullRequest {
+          url
+        }
+      }
+    }
+    `;
+
+  const newPrVariables = {
+    branchName,
+    id
+  };
+
+  const { createPullRequest: { pullRequest: { url: pullRequestUrl } } } = await octokit.graphql(createPrMutation, newPrVariables);
+
+  return pullRequestUrl;
+}
+
+async function getCommit(octokit, commitId, owner, repo) {
+  const { data: { files } } = await octokit.repos.getCommit({
+    owner,
+    repo,
+    ref: commitId
+  });
+
+  return files;
+}
+
+/***/ }),
+
 /***/ 129:
 /***/ (function(module) {
 
@@ -11532,77 +11621,39 @@ function removeHook (state, name, method) {
 const github = __webpack_require__(438);
 const core = __webpack_require__(186);
 const simpleGit = __webpack_require__(477);
-const {createBranch, clone, push} = __webpack_require__(918);
 const path = __webpack_require__(622);
 const { mkdir } = __webpack_require__(747).promises;
 const { copy } = __webpack_require__(630);
+
+const { createBranch, clone, push } = __webpack_require__(918);
+const { getReposList, createPr, getCommit } = __webpack_require__(119);
 
 const eventPayload = require(process.env.GITHUB_EVENT_PATH || '../test/fake-event.json');
 
 async function run() {
   const gitHubKey = process.env.GITHUB_TOKEN || core.getInput('github_token', { required: true });
-
+  const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
   const octokit = github.getOctokit(gitHubKey);
   const commitId = eventPayload.commits[0].id;
 
-  const {data: {files}} = await octokit.repos.getCommit({
-    owner: 'lukasz-lab',
-    repo: '.github',
-    ref: commitId
-  });
-
-  const changedFilename = files[0].filename;
+  const commitFiles = await getCommit(octokit, commitId, owner, repo);
+  const changedFilename = commitFiles[0].filename;
 
   if (!changedFilename.includes('.github/workflows')) return;
 
-  const reposListQuery = `
-  query {
-    user(login: "lukasz-lab") {
-      repositories(first: 100) {
-        nodes {
-          ... on Repository {
-            url
-            name
-            id
-          }
-        }
-      }
-    }
-  }
-  `;
-
-  const { user: { repositories: { nodes: reposList } } } = await octokit.graphql(reposListQuery);
+  const reposList = await getReposList(octokit, owner);
 
   for (const {url, name, id} of reposList) {
-    const dir = __webpack_require__.ab + "clones/" + name;
+    const dir = path.join(process.cwd(), './clones', name);
     await mkdir(dir, {recursive: true});
     const branchName = `bot/update-global-workflow-${commitId}`;
     const git = simpleGit({baseDir: dir});
     await clone(url, dir, git);
     await createBranch(branchName, git);
     await copy(path.join(process.cwd(),changedFilename), path.join(dir,changedFilename));
-    await push(gitHubKey, url, branchName, 'Update global workflows', git);
+    await push(gitHubKey, owner, url, branchName, 'Update global workflows', git);
 
-    const createPrMutation =
-    `mutation createPr($branchName: String!, $id: String!) {
-      createPullRequest(input: {
-        baseRefName: "master",
-        headRefName: $branchName,
-        title: "Update global workflows",
-        repositoryId: $id
-      }){
-        pullRequest {
-          url
-        }
-      }
-    }
-    `;
-
-    const newPrVariables = {
-      branchName,
-      id
-    };
-    const { createPullRequest: { pullRequest: { url: pullRequestUrl } } } = await octokit.graphql(createPrMutation, newPrVariables);
+    const pullRequestUrl = await createPr(octokit, branchName, id);
 
     console.log(`Entire workflow works like a charm, PR for ${name} is created -> ${pullRequestUrl}`);
   }
@@ -12623,18 +12674,16 @@ async function clone(remote, dir, git) {
     .clone(remote, dir, {'--depth': 1});
 }
 
-async function push(token, url, branchName, message, git) {
-  const authanticatedUrl = (token, url) => {
+async function push(token, owner, url, branchName, message, git) {
+  const authanticatedUrl = (token, url, owner) => {
     const arr = url.split('//');
-    return `https://lukasz-lab:${token}@${arr[arr.length - 1]}`;
+    return `https://${owner}:${token}@${arr[arr.length - 1]}`;
   };
 
-  //https://github.com/lukasz-lab/chewie-sample-data
-  //https://lukasz-lab:token@github.com/lukasz-lab/chewie-sample-data
   return await git
     .add('./*')
     .commit(message)
-    .addRemote('auth', authanticatedUrl(token, url))
+    .addRemote('auth', authanticatedUrl(token, url, owner))
     .push(['-u', 'auth', branchName]);
 }
   

@@ -10,7 +10,7 @@
     "gitAdd": "git add dist/index.js",
     "gen-readme-toc": "markdown-toc -i README.md",
     "lint": "eslint --max-warnings 0 .",
-    "lint-fix": "eslint --fix .",
+    "lint-fix": "eslint --fix --config .eslintrc .",
     "test": "npm run lint && jest"
   },
   "pre-commit": [
