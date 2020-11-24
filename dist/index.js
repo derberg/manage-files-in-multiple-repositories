@@ -11667,7 +11667,7 @@ const { mkdir } = __webpack_require__(747).promises;
 
 const { createBranch, clone, push } = __webpack_require__(374);
 const { getReposList, createPr } = __webpack_require__(119);
-const { getListModifiedFiles, copyChangedFiles } = __webpack_require__(918);
+const { getListModifiedFiles, copyChangedFiles, parseCommaList } = __webpack_require__(918);
 
 const eventPayload = require(process.env.GITHUB_EVENT_PATH);
 
@@ -11680,12 +11680,13 @@ async function run() {
     const committerUsername = core.getInput('committer_username');
     const committerEmail = core.getInput('committer_email');
     const commitMessage = core.getInput('commit_message');
+    const reposToIgnore = core.getInput('repos_to_ignore');
 
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
     const octokit = github.getOctokit(gitHubKey);
     //TODO for now this action is hardcoded to always get commit id of the first commit on the list
     const commitId = eventPayload.commits[0].id;
-    const ignoredRepositories = [repo];
+    const ignoredRepositories = reposToIgnore ? parseCommaList(reposToIgnore).push(repo) : [repo];
  
     core.startGroup(`Getting list of modified workflow files from ${commitId} located in ${owner}/${repo}.`);
     const modifiedFiles = await getListModifiedFiles(octokit, commitId, owner, repo, filesToIgnore);
@@ -11699,27 +11700,27 @@ async function run() {
     const reposList = await getReposList(octokit, owner);
 
     for (const {url, name, id, defaultBranchRef: { name: defaultBranch }} of reposList) {
-      if (ignoredRepositories.includes(name)) return;
+      if (!ignoredRepositories.includes(name)) {
+        core.startGroup(`Started updating ${name} repo`);
+        const dir = path.join(process.cwd(), './clones', name);
+        await mkdir(dir, {recursive: true});
 
-      core.startGroup(`Started updating ${name} repo`);
-      const dir = path.join(process.cwd(), './clones', name);
-      await mkdir(dir, {recursive: true});
+        const branchName = `bot/update-global-workflow-${commitId}`;
+        const git = simpleGit({baseDir: dir});
 
-      const branchName = `bot/update-global-workflow-${commitId}`;
-      const git = simpleGit({baseDir: dir});
+        core.info(`Clonning ${name}.`);
+        await clone(url, dir, git);
+        core.info(`Creating branch ${branchName}.`);
+        await createBranch(branchName, git);
+        core.info('Copying files...');
+        await copyChangedFiles(modifiedFiles, dir);
+        core.info('Pushing changes to remote');
+        await push(gitHubKey, url, branchName, commitMessage, committerUsername, committerEmail, git);
 
-      core.info(`Clonning ${name}.`);
-      await clone(url, dir, git);
-      core.info(`Creating branch ${branchName}.`);
-      await createBranch(branchName, git);
-      core.info('Copying files...');
-      await copyChangedFiles(modifiedFiles, dir);
-      core.info('Pushing changes to remote');
-      await push(gitHubKey, url, branchName, commitMessage, committerUsername, committerEmail, git);
-
-      const pullRequestUrl = await createPr(octokit, branchName, id, commitMessage, defaultBranch);
-      core.endGroup();
-      core.info(`Workflow finished with success and PR for ${name} is created -> ${pullRequestUrl}`);
+        const pullRequestUrl = await createPr(octokit, branchName, id, commitMessage, defaultBranch);
+        core.endGroup();
+        core.info(`Workflow finished with success and PR for ${name} is created -> ${pullRequestUrl}`);
+      }
     }
   } catch (error) {
     core.setFailed(`Action failed because of: ${ error}`);
@@ -12735,7 +12736,7 @@ const core = __webpack_require__(186);
 
 const { getCommitFiles } = __webpack_require__(119);
 
-module.exports = { getListModifiedFiles, copyChangedFiles };
+module.exports = { getListModifiedFiles, copyChangedFiles, parseCommaList };
 
 /**
  * @param  {Object} octokit GitHub API client instance
@@ -12749,7 +12750,7 @@ module.exports = { getListModifiedFiles, copyChangedFiles };
 async function getListModifiedFiles(octokit, commitId, owner, repo, filesToIgnore) {
   const commitFiles = await getCommitFiles(octokit, commitId, owner, repo);
   const changedFiles = [];
-  const ignoreFilesList = filesToIgnore ? filesToIgnore.split(',').map(i => i.trim().replace(/['"]+/g, '')) : [];
+  const ignoreFilesList = filesToIgnore ? parseCommaList(filesToIgnore) : [];
   
   core.info(`List of files that should be ignored: ${ignoreFilesList}`);
 
@@ -12777,6 +12778,14 @@ async function copyChangedFiles(filesList, destination) {
   await Promise.all(filesList.map(async filepath => {
     return await copy(path.join(process.cwd(), filepath), path.join(destination, filepath));
   }));
+}
+
+/**
+ * @param  {String} list names of values that can be separated by comma
+ * @returns  {Array<String>} input names not separated by string but as separate array items
+ */
+function parseCommaList(list) {
+  return list.split(',').map(i => i.trim().replace(/['"]+/g, ''));
 }
 
 /***/ }),
