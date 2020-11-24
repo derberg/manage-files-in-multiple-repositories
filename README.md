@@ -6,7 +6,6 @@ GitHub Action that introduces support for global actions. Global actions are the
 ## Limitations/Missing
 
 - For now we are hardcoded to support just users and not organizations (on graphql api level)
-- allow user to configure/provide a custom message for the commit
 - remember to put in docs info about required token scopes, like repo and workflow
 - master/main issue for PRs
 - send to output info about links to PRs

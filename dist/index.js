@@ -1708,13 +1708,13 @@ async function getReposList(octokit, owner) {
   }
 }
 
-async function createPr(octokit, branchName, id) {
+async function createPr(octokit, branchName, id, commitMessage) {
   const createPrMutation =
-    `mutation createPr($branchName: String!, $id: String!) {
+    `mutation createPr($branchName: String!, $id: String!, $commitMessage: String!) {
       createPullRequest(input: {
         baseRefName: "master",
         headRefName: $branchName,
-        title: "Update global workflows",
+        title: $commitMessage,
         repositoryId: $id
       }){
         pullRequest {
@@ -1726,7 +1726,8 @@ async function createPr(octokit, branchName, id) {
 
   const newPrVariables = {
     branchName,
-    id
+    id,
+    commitMessage
   };
 
   const { createPullRequest: { pullRequest: { url: pullRequestUrl } } } = await octokit.graphql(createPrMutation, newPrVariables);
@@ -11667,6 +11668,7 @@ async function run() {
   const gitHubKey = process.env.GITHUB_TOKEN || core.getInput('github_token', { required: true });
   const committerUsername = core.getInput('committer_username');
   const committerEmail = core.getInput('committer_email');
+  const commitMessage = core.getInput('commit_message');
 
   const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
   const octokit = github.getOctokit(gitHubKey);
@@ -11700,9 +11702,9 @@ async function run() {
     core.info('Copying files...');
     await copyChangedFiles(modifiedFiles, dir);
     core.info('Pushing changes to remote');
-    await push(gitHubKey, url, branchName, 'Update global workflows', committerUsername, committerEmail, git);
+    await push(gitHubKey, url, branchName, commitMessage, committerUsername, committerEmail, git);
 
-    const pullRequestUrl = await createPr(octokit, branchName, id);
+    const pullRequestUrl = await createPr(octokit, branchName, id, commitMessage);
     core.endGroup();
     core.info(`Workflow finished with success and PR for ${name} is created -> ${pullRequestUrl}`);
   }

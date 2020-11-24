@@ -21,6 +21,12 @@ inputs:
       In the format `noreply@github.com`.
     default: noreply@github.com
     required: false
+  commit_message:
+    description: >
+      It is used as a commit message when pushing changes with global workflows. 
+      It is also used as a title of the pull request that is created by this action.
+    default: Update global workflows
+    required: false
 runs:
   using: "node12"
   main: "dist/index.js"
