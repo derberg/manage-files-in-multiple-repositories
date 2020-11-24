@@ -30,8 +30,9 @@ inputs:
   files_to_ignore:
     description: >
       Comma-separated list of workflow files that should be ignored by this action and not updated in other repositories.
+      You myst provide here at least the name of the workflow file that uses this action.
       In the format `file.yml,another_file.yml`.
-    required: false
+    required: true
 runs:
   using: "node12"
   main: "dist/index.js"
