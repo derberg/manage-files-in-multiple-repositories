@@ -6,10 +6,10 @@ inputs:
   github_token:
     description: Token to use GitHub API.
     required: true
-  committer_name:
+  committer_username:
     description: >
-      The name of the committer that will be used in the commit of changes in the workflow file in specific repository.
-      In the format `Display Name`.
+      The username (not display name) of the committer that will be used in the commit of changes in the workflow file in specific repository.
+      In the format `github-actions`.
     default: github-actions
     required: false
   committer_email:

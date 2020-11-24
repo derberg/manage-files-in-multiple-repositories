@@ -6080,18 +6080,18 @@ async function clone(remote, dir, git) {
     .clone(remote, dir, {'--depth': 1});
 }
 
-async function push(token, owner, url, branchName, message, committerName, committerEmail, git) {
-  const authanticatedUrl = (token, url, owner) => {
+async function push(token, url, branchName, message, committerUsername, committerEmail, git) {
+  const authanticatedUrl = (token, url, user) => {
     const arr = url.split('//');
-    return `https://${owner}:${token}@${arr[arr.length - 1]}`;
+    return `https://${user}:${token}@${arr[arr.length - 1]}`;
   };
 
   return await git
     .add('./*')
-    .addConfig('user.name', committerName)
+    .addConfig('user.name', committerUsername)
     .addConfig('user.email', committerEmail)
     .commit(message)
-    .addRemote('auth', authanticatedUrl(token, url, owner))
+    .addRemote('auth', authanticatedUrl(token, url, committerUsername))
     .push(['-u', 'auth', branchName]);
 }
   
@@ -11700,7 +11700,7 @@ async function run() {
     core.info('Copying files...');
     await copyChangedFiles(modifiedFiles, dir);
     core.info('Pushing changes to remote');
-    await push(gitHubKey, owner, url, branchName, 'Update global workflows', committerName, committerEmail, git);
+    await push(gitHubKey, url, branchName, 'Update global workflows', committerName, committerEmail, git);
 
     const pullRequestUrl = await createPr(octokit, branchName, id);
     core.endGroup(`PR for ${name} is created -> ${pullRequestUrl}`);
