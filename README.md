@@ -1,7 +1,7 @@
 # Global Workflows Support
 GitHub Action that introduces support for global workflows. Global workflows are the ones that you update in just one repo and then they are automatically updated in other repositories in your organization or user account.
 
-> Action is released under **v0.0.1** and I plan to extend it forward and release under **v1** once I get other people using it. Feel free to create an issue about it.
+> Action is released under **v0.0.1** and I plan to extend it forward, add tests and release under **v1** once I get other people using it. Feel free to create an issue.about it.
 
 <!-- toc -->
 
