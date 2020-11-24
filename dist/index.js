@@ -11674,18 +11674,18 @@ const eventPayload = require(process.env.GITHUB_EVENT_PATH);
 async function run() {
   if (process.env.GITHUB_EVENT_NAME !== 'push') return core.setFailed('This GitHub Action works only when triggered by "push" webhook.');
 
-  const gitHubKey = process.env.GITHUB_TOKEN || core.getInput('github_token', { required: true });
-  const committerUsername = core.getInput('committer_username');
-  const committerEmail = core.getInput('committer_email');
-  const commitMessage = core.getInput('commit_message');
-
-  const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
-  const octokit = github.getOctokit(gitHubKey);
-  //TODO for now this action is hardcoded to always get commit id of the first commit on the list
-  const commitId = eventPayload.commits[0].id;
-  const ignoredRepositories = [repo];
-
   try {
+    const gitHubKey = process.env.GITHUB_TOKEN || core.getInput('github_token', { required: true });
+    const committerUsername = core.getInput('committer_username');
+    const committerEmail = core.getInput('committer_email');
+    const commitMessage = core.getInput('commit_message');
+
+    const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
+    const octokit = github.getOctokit(gitHubKey);
+    //TODO for now this action is hardcoded to always get commit id of the first commit on the list
+    const commitId = eventPayload.commits[0].id;
+    const ignoredRepositories = [repo];
+ 
     core.info(`Getting list of modified workflow files from ${commitId} located in ${owner}/${repo}.`);
     const modifiedFiles = await getListModifiedFiles(octokit, commitId, owner, repo);
 
