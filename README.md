@@ -3,7 +3,20 @@ GitHub Action that introduces support for global workflows. Global workflows are
 
 > Action is released under **v0.0.1** and I plan to extend it forward and release under **v1** once I get other people using it. Feel free to create an issue about it.
 
-## Why I Created It?
+<!-- toc -->
+
+- [Why I Created This Action?](#why-i-created-this-action)
+- [Action Flow](#action-flow)
+- [Configuration](#configuration)
+- [Examples](#examples)
+  * [Minimum Workflow](#minimum-workflow)
+  * [Advanced Workflow](#advanced-workflow)
+- [Development](#development)
+- [Known Limitations/Hardcodes](#known-limitationshardcodes)
+
+<!-- tocstop -->
+
+## Why I Created This Action?
 
 It seems like GitHub is [not going](https://github.community/t/plans-to-support-global-workflows-in-github-repository/17899) to support global workflows anytime soon. This is why I decided to create this action as I was just super tired editing the same workflow files in over 30 repositories manually. Actually, to be honest, I never did it, I never did it manually and could not imagine I do it.
 
