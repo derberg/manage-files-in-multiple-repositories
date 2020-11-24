@@ -5,7 +5,7 @@ description: >
 inputs:
   github_token:
     description: >
-      Token to use GitHub API. 
+      Token to use GitHub API. It must have "repo" and "workflow" scopes so it can push to repo and edit workflows.
       It cannot be the default GitHub Actions token GITHUB_TOKEN. GitHub Action token's permissions are limited to the repository that contains your workflows.
       Provide token of the user that has rights to push to the repos that this action is suppose to update. 
     required: true

@@ -5,10 +5,8 @@ GitHub Action that introduces support for global actions. Global actions are the
 
 ## Limitations/Missing
 
-- remember to put in docs info about required token scopes, like repo and workflow
 - master/main issue for PRs
 - add proper try/catch and setting failure with core package
-- add clear info about GITHUB_TOKEN that if someone wants to use different than GitHub Action, then they need to make sure the other account has rights to push to repositories it is suppose to update.
 
 ## Development
 
