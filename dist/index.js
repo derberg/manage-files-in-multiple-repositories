@@ -11686,8 +11686,10 @@ async function run() {
     const octokit = github.getOctokit(gitHubKey);
     //TODO for now this action is hardcoded to always get commit id of the first commit on the list
     const commitId = eventPayload.commits[0].id;
-    const ignoredRepositories = reposToIgnore ? parseCommaList(reposToIgnore).push(repo) : [repo];
- 
+    const ignoredRepositories = reposToIgnore ? parseCommaList(reposToIgnore) : [];
+    //by default repo where workflow runs should always be ignored
+    ignoredRepositories.push(repo);
+
     core.startGroup(`Getting list of modified workflow files from ${commitId} located in ${owner}/${repo}.`);
     const modifiedFiles = await getListModifiedFiles(octokit, commitId, owner, repo, filesToIgnore);
 
@@ -11696,7 +11698,7 @@ async function run() {
     
     core.info(`Modified files that need replication are: ${modifiedFiles}.`);
     core.endGroup();
-    core.info(`Getting list of repositories owned by ${owner} that will get updates.`);
+    core.info(`Getting list of repositories owned by ${owner} that will get updates. The following repos will be later ignored: ${ignoredRepositories}`);
     const reposList = await getReposList(octokit, owner);
 
     for (const {url, name, id, defaultBranchRef: { name: defaultBranch }} of reposList) {
