@@ -12761,7 +12761,7 @@ async function getListModifiedFiles(octokit, commitId, owner, repo, filesToIgnor
     const isWorkflowFile = filename.includes('.github/workflows');
     core.info(`Checking if ${filename} is located in workflows directory (${isWorkflowFile}) and if ${onlyFileName} should be ignored (${isFileIgnored})`);
 
-    if (isWorkflowFile || !isFileIgnored) {
+    if (isWorkflowFile && !isFileIgnored) {
       changedFiles.push(filename);
     }
   }
