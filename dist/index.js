@@ -11703,7 +11703,8 @@ async function run() {
     await push(gitHubKey, url, branchName, 'Update global workflows', committerUsername, committerEmail, git);
 
     const pullRequestUrl = await createPr(octokit, branchName, id);
-    core.endGroup(`PR for ${name} is created -> ${pullRequestUrl}`);
+    core.endGroup();
+    core.info(`Workflow finished with success and PR for ${name} is created -> ${pullRequestUrl}`);
   }
 }
 

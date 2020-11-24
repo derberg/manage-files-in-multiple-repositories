@@ -12,15 +12,13 @@ inputs:
   committer_username:
     description: >
       The username (not display name) of the committer that will be used in the commit of changes in the workflow file in specific repository.
-      Must match the username of the github_token owner.
-      In the format `github-actions`.
-    default: github-actions
+      In the format `web-flow`.
+    default: web-flow
     required: false
   committer_email:
     description: >
       The email of the committer that will be used in the commit of changes in the workflow file in specific repository.
-      Must match the email of the github_token owner
-      In the format `Display Name`.
+      In the format `noreply@github.com`.
     default: noreply@github.com
     required: false
 runs:
