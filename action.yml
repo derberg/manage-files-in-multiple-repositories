@@ -43,5 +43,5 @@ runs:
   using: "node12"
   main: "dist/index.js"
 branding:
-  icon: "link"
-  color: "blue"
+  icon: "compass"
+  color: "gray-dark"

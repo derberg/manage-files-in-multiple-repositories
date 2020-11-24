@@ -1,5 +1,7 @@
 # Global Workflows Support
-GitHub Action that introduces support for global workflows. Global actions are the ones that you update in just one repo and then they are automatically updated in other repositories in your organization or user account.
+GitHub Action that introduces support for global workflows. Global workflows are the ones that you update in just one repo and then they are automatically updated in other repositories in your organization or user account.
+
+> Action is released under **v0.0.1** and I plan to extend it forward and release under **v1** once I get other people using it. Feel free to create an issue about it.
 
 ## Why I Created It?
 
@@ -13,7 +15,109 @@ Maybe GitHub will support global workflows some day. I take it into account and 
 
 ## Configuration
 
+Name | Description | Required | Default
+--|------|--|--
+github_token | Token to use GitHub API. It must have "repo" and "workflow" scopes so it can push to repo and edit workflows. It cannot be the default GitHub Actions token GITHUB_TOKEN. GitHub Action token's permissions are limited to the repository that contains your workflows. Provide token of the user that has rights to push to the repos that this action is suppose to update. | true | -
+files_to_ignore | Comma-separated list of workflow files that should be ignored by this action and not updated in other repositories. You must provide here at least the name of the workflow file that uses this action. In the format `file.yml,another_file.yml`. | true | -
+committer_username | The username (not display name) of the committer that will be used in the commit of changes in the workflow file in specific repository. In the format `web-flow`. | false | `web-flow`
+committer_email | The email of the committer that will be used in the commit of changes in the workflow file in specific repository. In the format `noreply@github.com`.| false | `noreply@github.com`
+commit_message | It is used as a commit message when pushing changes with global workflows. It is also used as a title of the pull request that is created by this action. | false | `Update global workflows`
+repos_to_ignore | Comma-separated list of repositories that should not get updates from this action. Action already ignores the repo in which the action is triggered so you do not need to add it explicitly. In the format `repo1,repo2`. | false | -
+
 ## Examples
+
+### Minimum Workflow
+
+```yml
+name: Global workflow to rule all other workflows
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+
+  replicate_changes:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: derberg/global-actions-support@0.0.1
+        with:
+          github_token: ${{ secrets.CUSTOM_TOKEN }}
+          files_to_ignore: name_of_file_where_this_action_is_used.yml
+```
+
+### Advanced Workflow
+
+1. In your `.github` repo you could have the following workflow:
+    ```yml
+    name: Global workflow to rule all other workflows
+
+    on:
+    push:
+        branches: [ master ]
+
+    jobs:
+
+    replicate_changes:
+
+        runs-on: ubuntu-latest
+
+        steps:
+        - uses: actions/checkout@v2
+        - uses: derberg/global-actions-support@0.0.1
+            with:
+            github_token: ${{ secrets.CUSTOM_TOKEN }}
+            files_to_ignore: name_of_file_where_this_action_is_used.yml
+            repos_to_ignore: repo1,repo2
+            committer_username: santiago-bernabeu
+            committer_email: my-email@me.com
+            commit_message: "ci: update global workflows"
+    ```
+2. In repositories that will be updated by this workflow you can have the following automerge workflow file:
+    ```yml
+    name: Automerge release bump PR
+
+    on:
+    pull_request:
+        types:
+        - labeled
+        - unlabeled
+        - synchronize
+        - opened
+        - edited
+        - ready_for_review
+        - reopened
+        - unlocked
+    pull_request_review:
+        types:
+        - submitted
+    check_suite: 
+        types:
+        - completed
+    status: {}
+    
+    jobs:
+
+    automerge:
+        needs: [autoapprove]
+        runs-on: ubuntu-latest
+        steps:
+        - name: Automerging
+            uses: pascalgn/automerge-action@v0.7.5
+            #the actor that created pr
+            if: github.actor == 'github-username-that-owns-token-used-in-global-workflow'
+            env:
+            GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+            GITHUB_LOGIN: santiago-bernabeu
+            MERGE_LABELS: ""
+            MERGE_METHOD: "squash"
+            MERGE_COMMIT_MESSAGE: "pull-request-title"
+            MERGE_RETRIES: "10"
+            MERGE_RETRY_SLEEP: "10000"
+    ```
 
 ## Development
 
