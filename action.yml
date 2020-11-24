@@ -1,7 +1,5 @@
-name: "Global Workflows Support"
-description: >
-  This action introduces support for global workflows. 
-  Global workflows are the one you update in just one repo and they are automatically updated in other repositories."
+name: Global Workflows Support
+description: This action introduces support for global workflows.
 inputs:
   github_token:
     description: >
@@ -40,8 +38,8 @@ inputs:
       In the format `repo1,repo2`.
     required: false
 runs:
-  using: "node12"
-  main: "dist/index.js"
+  using: node12
+  main: dist/index.js
 branding:
-  icon: "compass"
-  color: "gray-dark"
+  icon: compass
+  color: gray-dark
