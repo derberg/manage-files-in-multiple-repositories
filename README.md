@@ -1,7 +1,7 @@
 # Global Workflows Support
 GitHub Action that introduces support for global workflows. Global workflows are the ones that you update in just one repo and then they are automatically updated in other repositories in your organization or user account.
 
-> Action is released under **v0.0.1** and I plan to extend it forward, add tests and release under **v1** once I get other people using it. Feel free to create an issue.about it.
+> Action is released under **v0.0.2** and I plan to extend it forward, add tests and release under **v1** once I get other people using it. Feel free to create an issue.about it.
 
 <!-- toc -->
 
@@ -56,7 +56,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: derberg/global-actions-support@0.0.1
+      - uses: derberg/global-workflows-support@v0.0.2
         with:
           github_token: ${{ secrets.CUSTOM_TOKEN }}
           files_to_ignore: name_of_file_where_this_action_is_used.yml
@@ -79,8 +79,10 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-        - uses: actions/checkout@v2
-        - uses: derberg/global-actions-support@0.0.1
+        - name: Checkout repository
+          uses: actions/checkout@v2
+        - name: Replicating global workflow
+          uses: derberg/global-workflows-support@v0.0.2
             with:
             github_token: ${{ secrets.CUSTOM_TOKEN }}
             files_to_ignore: name_of_file_where_this_action_is_used.yml
