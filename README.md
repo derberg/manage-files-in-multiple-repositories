@@ -1,9 +1,18 @@
-# global-actions-support
-GitHub Action that introduces support for global actions. Global actions are the one you update in just one repo and they are automatically updated in other repositories.
+# Global Workflows Support
+GitHub Action that introduces support for global workflows. Global actions are the ones that you update in just one repo and then they are automatically updated in other repositories in your organization or user account.
 
 
 
-## Limitations/Missing
+## Why I Created It?
+
+It seems like GitHub is [not going](https://github.community/t/plans-to-support-global-workflows-in-github-repository/17899) to support global workflows anytime soon. This is why I decided to create this action as I was just super tired editing the same workflow files in over 30 repositories manually. Actually, to be honest, I never did it, I never did it manually and could not imagine I do it.
+
+Maybe GitHub will support global workflows some day. I take it into account and suggest you to put global workflows in repository called `.github` because once GitHub starts supporting global workflows, they will for sure have to be located there. Read more about `.github` repository [here](https://docs.github.com/en/free-pro-team@latest/github/building-a-strong-community/creating-a-default-community-health-file).
+
+
+## Configuration
+
+## Examples
 
 ## Development
 

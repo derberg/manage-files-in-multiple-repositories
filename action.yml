@@ -27,6 +27,11 @@ inputs:
       It is also used as a title of the pull request that is created by this action.
     default: Update global workflows
     required: false
+  files_to_ignore:
+    description: >
+      Comma-separated list of workflow files that should be ignored by this action and not updated in other repositories.
+      In the format `file.yml,another_file.yml`.
+    required: false
 runs:
   using: "node12"
   main: "dist/index.js"

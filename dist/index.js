@@ -11679,6 +11679,7 @@ async function run() {
     const committerUsername = core.getInput('committer_username');
     const committerEmail = core.getInput('committer_email');
     const commitMessage = core.getInput('commit_message');
+    const filesToIgnore = core.getInput('files_to_ignore');
 
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
     const octokit = github.getOctokit(gitHubKey);
@@ -11687,7 +11688,7 @@ async function run() {
     const ignoredRepositories = [repo];
  
     core.info(`Getting list of modified workflow files from ${commitId} located in ${owner}/${repo}.`);
-    const modifiedFiles = await getListModifiedFiles(octokit, commitId, owner, repo);
+    const modifiedFiles = await getListModifiedFiles(octokit, commitId, owner, repo, filesToIgnore);
 
     if (!modifiedFiles.length) 
       return core.info('No changes to workflows were detected.');
@@ -11719,7 +11720,7 @@ async function run() {
       core.info(`Workflow finished with success and PR for ${name} is created -> ${pullRequestUrl}`);
     }
   } catch (error) {
-    core.setFailed(`Action failed because of${ error}`);
+    core.setFailed(`Action failed because of: ${ error}`);
   }
 }
 
@@ -12738,17 +12739,23 @@ module.exports = { getListModifiedFiles, copyChangedFiles };
  * @param  {Object} eventPayload https://developer.github.com/webhooks/event-payloads/#push
  * @param  {String} owner org or user name
  * @param  {String} repo repo name
+ * @param  {String} filesToIgnore comma-separated list of files that should be ignored
  * 
  * @returns {Array<String>} list of filepaths of modified files
  */
-async function getListModifiedFiles(octokit, commitId, owner, repo) {
+async function getListModifiedFiles(octokit, commitId, owner, repo, filesToIgnore) {
   const commitFiles = await getCommitFiles(octokit, commitId, owner, repo);
   const changedFiles = [];
+  const ignoreFilesList = filesToIgnore ? filesToIgnore.split(',').map(i => i.trim()) : [];
 
   for (const { filename } of commitFiles) {
+    const onlyFileName = filename.split('/').slice(-1);
     //TODO for now this action is hardcoded to only monitor changes in this directory because it is supposed to support global workflows and no other files
     //This can be changed if there is a well described use case
-    if (!filename.includes('.github/workflows')) return;
+    if (
+      !filename.includes('.github/workflows')
+      || ignoreFilesList.map(file => file === onlyFileName).filter(Boolean).length
+    ) return;
 
     changedFiles.push(filename);
   }
