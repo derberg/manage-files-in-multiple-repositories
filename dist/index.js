@@ -11665,7 +11665,7 @@ const eventPayload = require(process.env.GITHUB_EVENT_PATH);
 
 async function run() {
   const gitHubKey = process.env.GITHUB_TOKEN || core.getInput('github_token', { required: true });
-  const committerName = core.getInput('committer_name');
+  const committerUsername = core.getInput('committer_username');
   const committerEmail = core.getInput('committer_email');
 
   const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
@@ -11700,7 +11700,7 @@ async function run() {
     core.info('Copying files...');
     await copyChangedFiles(modifiedFiles, dir);
     core.info('Pushing changes to remote');
-    await push(gitHubKey, url, branchName, 'Update global workflows', committerName, committerEmail, git);
+    await push(gitHubKey, url, branchName, 'Update global workflows', committerUsername, committerEmail, git);
 
     const pullRequestUrl = await createPr(octokit, branchName, id);
     core.endGroup(`PR for ${name} is created -> ${pullRequestUrl}`);
