@@ -11665,6 +11665,8 @@ const { getListModifiedFiles, copyChangedFiles } = __webpack_require__(918);
 const eventPayload = require(process.env.GITHUB_EVENT_PATH);
 
 async function run() {
+  if (process.env.GITHUB_EVENT_NAME !== 'push') return core.setFailed('This GitHub Action works only when triggered by "push" webhook.');
+
   const gitHubKey = process.env.GITHUB_TOKEN || core.getInput('github_token', { required: true });
   const committerUsername = core.getInput('committer_username');
   const committerEmail = core.getInput('committer_email');
