@@ -1672,6 +1672,9 @@ async function getReposList(octokit, owner) {
                         name
                         url
                         id
+                        defaultBranchRef {
+                            name
+                        }
                     }
                 }
             }
@@ -1683,6 +1686,9 @@ async function getReposList(octokit, owner) {
                         name
                         url
                         id
+                        defaultBranchRef {
+                            name
+                        }
                     }
                 }
             }
@@ -1708,11 +1714,11 @@ async function getReposList(octokit, owner) {
   }
 }
 
-async function createPr(octokit, branchName, id, commitMessage) {
+async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
   const createPrMutation =
-    `mutation createPr($branchName: String!, $id: String!, $commitMessage: String!) {
+    `mutation createPr($branchName: String!, $id: String!, $commitMessage: String!, $defaultBranch: String!) {
       createPullRequest(input: {
-        baseRefName: "master",
+        baseRefName: $defaultBranch,
         headRefName: $branchName,
         title: $commitMessage,
         repositoryId: $id
@@ -1727,7 +1733,8 @@ async function createPr(octokit, branchName, id, commitMessage) {
   const newPrVariables = {
     branchName,
     id,
-    commitMessage
+    commitMessage,
+    defaultBranch
   };
 
   const { createPullRequest: { pullRequest: { url: pullRequestUrl } } } = await octokit.graphql(createPrMutation, newPrVariables);
@@ -11688,7 +11695,7 @@ async function run() {
     core.info(`Getting list of repositories owned by ${owner} that will get updates.`);
     const reposList = await getReposList(octokit, owner);
 
-    for (const {url, name, id} of reposList) {
+    for (const {url, name, id, defaultBranchRef: { name: defaultBranch }} of reposList) {
       if (ignoredRepositories.includes(name)) return;
 
       core.startGroup(`Started updating ${name} repo`);
@@ -11707,7 +11714,7 @@ async function run() {
       core.info('Pushing changes to remote');
       await push(gitHubKey, url, branchName, commitMessage, committerUsername, committerEmail, git);
 
-      const pullRequestUrl = await createPr(octokit, branchName, id, commitMessage);
+      const pullRequestUrl = await createPr(octokit, branchName, id, commitMessage, defaultBranch);
       core.endGroup();
       core.info(`Workflow finished with success and PR for ${name} is created -> ${pullRequestUrl}`);
     }

@@ -5,8 +5,6 @@ GitHub Action that introduces support for global actions. Global actions are the
 
 ## Limitations/Missing
 
-- master/main issue for PRs
-
 ## Development
 
 ```bash
