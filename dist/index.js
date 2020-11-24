@@ -12749,12 +12749,12 @@ module.exports = { getListModifiedFiles, copyChangedFiles };
 async function getListModifiedFiles(octokit, commitId, owner, repo, filesToIgnore) {
   const commitFiles = await getCommitFiles(octokit, commitId, owner, repo);
   const changedFiles = [];
-  const ignoreFilesList = filesToIgnore ? filesToIgnore.split(',').map(i => i.trim()) : [];
+  const ignoreFilesList = filesToIgnore ? filesToIgnore.split(',').map(i => i.trim().replace(/['"]+/g, '')) : [];
   
   core.info(`List of files that should be ignored: ${ignoreFilesList}`);
 
   for (const { filename } of commitFiles) {
-    const onlyFileName = filename.split('/').slice(-1);
+    const onlyFileName = filename.split('/').slice(-1).replace(/['"]+/g, '');
     const isFileIgnored = !!ignoreFilesList.map(file => file === onlyFileName).filter(Boolean).length;
     //TODO for now this action is hardcoded to only monitor changes in this directory because it is supposed to support global workflows and no other files
     //This can be changed if there is a well described use case
