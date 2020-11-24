@@ -1,9 +1,23 @@
-name: "Global Actions Support"
-description: "This action introduces support for global actions. Global actions are the one you update in just one repo and they are automatically updated in other repositories."
+name: "Global Workflows Support"
+description: >
+  This action introduces support for global workflows. 
+  Global workflows are the one you update in just one repo and they are automatically updated in other repositories."
 inputs:
   github_token:
-    description: "Token to use GitHub API."
+    description: Token to use GitHub API.
     required: true
+  committer_name:
+    description: >
+      The name of the committer that will be used in the commit of changes in the workflow file in specific repository.
+      In the format `Display Name`.
+    default: github-actions
+    required: false
+  committer_email:
+    description: >
+      The email of the committer that will be used in the commit of changes in the workflow file in specific repository.
+      In the format `Display Name`.
+    default: noreply@github.com
+    required: false
 runs:
   using: "node12"
   main: "dist/index.js"

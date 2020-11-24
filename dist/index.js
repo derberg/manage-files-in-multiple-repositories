@@ -6080,7 +6080,7 @@ async function clone(remote, dir, git) {
     .clone(remote, dir, {'--depth': 1});
 }
 
-async function push(token, owner, url, branchName, message, git) {
+async function push(token, owner, url, branchName, message, committerName, committerEmail, git) {
   const authanticatedUrl = (token, url, owner) => {
     const arr = url.split('//');
     return `https://${owner}:${token}@${arr[arr.length - 1]}`;
@@ -6088,6 +6088,8 @@ async function push(token, owner, url, branchName, message, git) {
 
   return await git
     .add('./*')
+    .addConfig('user.name', committerName)
+    .addConfig('user.email', committerEmail)
     .commit(message)
     .addRemote('auth', authanticatedUrl(token, url, owner))
     .push(['-u', 'auth', branchName]);
@@ -11663,6 +11665,9 @@ const eventPayload = require(process.env.GITHUB_EVENT_PATH);
 
 async function run() {
   const gitHubKey = process.env.GITHUB_TOKEN || core.getInput('github_token', { required: true });
+  const committerName = core.getInput('committer_name');
+  const committerEmail = core.getInput('committer_email');
+
   const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
   const octokit = github.getOctokit(gitHubKey);
   //TODO for now this action is hardcoded to always get commit id of the first commit on the list
@@ -11695,7 +11700,7 @@ async function run() {
     core.info('Copying files...');
     await copyChangedFiles(modifiedFiles, dir);
     core.info('Pushing changes to remote');
-    await push(gitHubKey, owner, url, branchName, 'Update global workflows', git);
+    await push(gitHubKey, owner, url, branchName, 'Update global workflows', committerName, committerEmail, git);
 
     const pullRequestUrl = await createPr(octokit, branchName, id);
     core.endGroup(`PR for ${name} is created -> ${pullRequestUrl}`);
