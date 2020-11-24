@@ -11678,37 +11678,41 @@ async function run() {
   const commitId = eventPayload.commits[0].id;
   const ignoredRepositories = [repo];
 
-  core.info(`Getting list of modified workflow files from ${commitId} located in ${owner}/${repo}.`);
-  const modifiedFiles = await getListModifiedFiles(octokit, commitId, owner, repo);
+  try {
+    core.info(`Getting list of modified workflow files from ${commitId} located in ${owner}/${repo}.`);
+    const modifiedFiles = await getListModifiedFiles(octokit, commitId, owner, repo);
 
-  if (!modifiedFiles.length) 
-    return core.info('No changes to workflows were detected.');
+    if (!modifiedFiles.length) 
+      return core.info('No changes to workflows were detected.');
 
-  core.info(`Getting list of repositories owned by ${owner} that will get updates.`);
-  const reposList = await getReposList(octokit, owner);
+    core.info(`Getting list of repositories owned by ${owner} that will get updates.`);
+    const reposList = await getReposList(octokit, owner);
 
-  for (const {url, name, id} of reposList) {
-    if (ignoredRepositories.includes(name)) return;
+    for (const {url, name, id} of reposList) {
+      if (ignoredRepositories.includes(name)) return;
 
-    core.startGroup(`Started updating ${name} repo`);
-    const dir = path.join(process.cwd(), './clones', name);
-    await mkdir(dir, {recursive: true});
+      core.startGroup(`Started updating ${name} repo`);
+      const dir = path.join(process.cwd(), './clones', name);
+      await mkdir(dir, {recursive: true});
 
-    const branchName = `bot/update-global-workflow-${commitId}`;
-    const git = simpleGit({baseDir: dir});
+      const branchName = `bot/update-global-workflow-${commitId}`;
+      const git = simpleGit({baseDir: dir});
 
-    core.info(`Clonning ${name}.`);
-    await clone(url, dir, git);
-    core.info(`Creating branch ${branchName}.`);
-    await createBranch(branchName, git);
-    core.info('Copying files...');
-    await copyChangedFiles(modifiedFiles, dir);
-    core.info('Pushing changes to remote');
-    await push(gitHubKey, url, branchName, commitMessage, committerUsername, committerEmail, git);
+      core.info(`Clonning ${name}.`);
+      await clone(url, dir, git);
+      core.info(`Creating branch ${branchName}.`);
+      await createBranch(branchName, git);
+      core.info('Copying files...');
+      await copyChangedFiles(modifiedFiles, dir);
+      core.info('Pushing changes to remote');
+      await push(gitHubKey, url, branchName, commitMessage, committerUsername, committerEmail, git);
 
-    const pullRequestUrl = await createPr(octokit, branchName, id, commitMessage);
-    core.endGroup();
-    core.info(`Workflow finished with success and PR for ${name} is created -> ${pullRequestUrl}`);
+      const pullRequestUrl = await createPr(octokit, branchName, id, commitMessage);
+      core.endGroup();
+      core.info(`Workflow finished with success and PR for ${name} is created -> ${pullRequestUrl}`);
+    }
+  } catch (error) {
+    core.setFailed(`Action failed because of${ error}`);
   }
 }
 
