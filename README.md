@@ -7,6 +7,9 @@ It seems like GitHub is [not going](https://github.community/t/plans-to-support-
 
 Maybe GitHub will support global workflows some day. I take it into account and suggest you to put global workflows in repository called `.github` because once GitHub starts supporting global workflows, they will for sure have to be located there. Read more about `.github` repository [here](https://docs.github.com/en/free-pro-team@latest/github/building-a-strong-community/creating-a-default-community-health-file).
 
+## Action Flow
+
+ <img src="diagram.png" alt="flow diagram" width="40%"> 
 
 ## Configuration
 
