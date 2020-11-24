@@ -11687,12 +11687,14 @@ async function run() {
     const commitId = eventPayload.commits[0].id;
     const ignoredRepositories = [repo];
  
-    core.info(`Getting list of modified workflow files from ${commitId} located in ${owner}/${repo}.`);
+    core.startGroup(`Getting list of modified workflow files from ${commitId} located in ${owner}/${repo}.`);
     const modifiedFiles = await getListModifiedFiles(octokit, commitId, owner, repo, filesToIgnore);
 
     if (!modifiedFiles.length) 
       return core.info('No changes to workflows were detected.');
-
+    
+    core.info(`Modified files that need replication are: ${modifiedFiles}.`);
+    core.endGroup();
     core.info(`Getting list of repositories owned by ${owner} that will get updates.`);
     const reposList = await getReposList(octokit, owner);
 
@@ -12729,6 +12731,7 @@ module.exports = {
 
 const { copy } = __webpack_require__(630);
 const path = __webpack_require__(622);
+const core = __webpack_require__(186);
 
 const { getCommitFiles } = __webpack_require__(119);
 
@@ -12747,9 +12750,12 @@ async function getListModifiedFiles(octokit, commitId, owner, repo, filesToIgnor
   const commitFiles = await getCommitFiles(octokit, commitId, owner, repo);
   const changedFiles = [];
   const ignoreFilesList = filesToIgnore ? filesToIgnore.split(',').map(i => i.trim()) : [];
+  
+  core.info(`List of files that were modified: ${ignoreFilesList}`);
 
   for (const { filename } of commitFiles) {
     const onlyFileName = filename.split('/').slice(-1);
+    core.info(`Checking if ${filename} is located in workflows directory and if ${onlyFileName} should be ignored`);
     //TODO for now this action is hardcoded to only monitor changes in this directory because it is supposed to support global workflows and no other files
     //This can be changed if there is a well described use case
     if (
