@@ -42,11 +42,11 @@ repos_to_ignore | Comma-separated list of repositories that should not get updat
 ### Minimum Workflow
 
 ```yml
-name: Global workflow to rule all other workflows
+name: Global workflow to rule them all
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master ] #or main
 
 jobs:
 
@@ -66,72 +66,71 @@ jobs:
 
 1. In your `.github` repo you could have the following workflow:
     ```yml
-    name: Global workflow to rule all other workflows
+    name: Global workflow to rule them all
 
     on:
-    push:
-        branches: [ master ]
+      push:
+          branches: [ master ] #or main
 
     jobs:
 
-    replicate_changes:
+      replicate_changes:
 
-        runs-on: ubuntu-latest
+          runs-on: ubuntu-latest
 
-        steps:
-        - name: Checkout repository
-          uses: actions/checkout@v2
-        - name: Replicating global workflow
-          uses: derberg/global-workflows-support@v0.0.2
-            with:
-            github_token: ${{ secrets.CUSTOM_TOKEN }}
-            files_to_ignore: name_of_file_where_this_action_is_used.yml
-            repos_to_ignore: repo1,repo2
-            committer_username: santiago-bernabeu
-            committer_email: my-email@me.com
-            commit_message: "ci: update global workflows"
+          steps:
+            - name: Checkout repository
+              uses: actions/checkout@v2
+            - name: Replicating global workflow
+              uses: derberg/global-workflows-support@v0.0.2
+              with:
+                github_token: ${{ secrets.CUSTOM_TOKEN }}
+                files_to_ignore: name_of_file_where_this_action_is_used.yml
+                repos_to_ignore: repo1,repo2
+                committer_username: santiago-bernabeu
+                committer_email: my-email@me.com
+                commit_message: "ci: update global workflows"
     ```
 2. In repositories that will be updated by this workflow you can have the following automerge workflow file:
     ```yml
     name: Automerge release bump PR
 
     on:
-    pull_request:
-        types:
-        - labeled
-        - unlabeled
-        - synchronize
-        - opened
-        - edited
-        - ready_for_review
-        - reopened
-        - unlocked
-    pull_request_review:
-        types:
-        - submitted
-    check_suite: 
-        types:
-        - completed
-    status: {}
+      pull_request:
+          types:
+          - labeled
+          - unlabeled
+          - synchronize
+          - opened
+          - edited
+          - ready_for_review
+          - reopened
+          - unlocked
+      pull_request_review:
+          types:
+          - submitted
+      check_suite: 
+          types:
+          - completed
+      status: {}
     
     jobs:
 
-    automerge:
-        needs: [autoapprove]
-        runs-on: ubuntu-latest
-        steps:
-        - name: Automerging
+      automerge:
+          runs-on: ubuntu-latest
+          steps:
+          - name: Automerging
             uses: pascalgn/automerge-action@v0.7.5
             #the actor that created pr
             if: github.actor == 'github-username-that-owns-token-used-in-global-workflow'
             env:
-            GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-            GITHUB_LOGIN: santiago-bernabeu
-            MERGE_LABELS: ""
-            MERGE_METHOD: "squash"
-            MERGE_COMMIT_MESSAGE: "pull-request-title"
-            MERGE_RETRIES: "10"
-            MERGE_RETRY_SLEEP: "10000"
+              GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+              GITHUB_LOGIN: santiago-bernabeu
+              MERGE_LABELS: ""
+              MERGE_METHOD: "squash"
+              MERGE_COMMIT_MESSAGE: "pull-request-title"
+              MERGE_RETRIES: "10"
+              MERGE_RETRY_SLEEP: "10000"
     ```
 
 ## Development
