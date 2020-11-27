@@ -1,7 +1,7 @@
 # Global Workflows Support
-GitHub Action that introduces support for global workflows. Global workflows are the ones that you update in just one repo and then they are automatically updated in other repositories in your organization or user account.
+GitHub Action that introduces support for global workflows. Global workflows are the ones that you update in just one repo, and then they are automatically updated in other repositories in your organization or user account.
 
-> Action is released under **v0.0.2** and I plan to extend it forward, add tests and release under **v1** once I get other people using it. Feel free to create an issue.about it.
+> Action is released under **v0.0.2**, and I plan to extend it forward, add tests and release under **v1** once I get other people using it. Feel free to create an issue about it.
 
 <!-- toc -->
 
@@ -18,9 +18,9 @@ GitHub Action that introduces support for global workflows. Global workflows are
 
 ## Why I Created This Action?
 
-It seems like GitHub is [not going](https://github.community/t/plans-to-support-global-workflows-in-github-repository/17899) to support global workflows anytime soon. This is why I decided to create this action as I was just super tired editing the same workflow files in over 30 repositories manually. Actually, to be honest, I never did it, I never did it manually and could not imagine I do it.
+It seems like GitHub is [not going](https://github.community/t/plans-to-support-global-workflows-in-github-repository/17899) to support global workflows anytime soon. I decided to create this action as I was just super tired of manually editing the same workflow files in over 30 repositories. To be honest, I never did it; I never did it manually and could not imagine I do it :smiley:
 
-Maybe GitHub will support global workflows some day. I take it into account and suggest you to put global workflows in repository called `.github` because once GitHub starts supporting global workflows, they will for sure have to be located there. Read more about `.github` repository [here](https://docs.github.com/en/free-pro-team@latest/github/building-a-strong-community/creating-a-default-community-health-file).
+Maybe GitHub will support global workflows someday. Take it into account and put global workflows in a repository called `.github` because once GitHub starts supporting global workflows, they will surely have to be located there. Read more about `.github` repository [here](https://docs.github.com/en/free-pro-team@latest/github/building-a-strong-community/creating-a-default-community-health-file).
 
 ## Action Flow
 
@@ -30,10 +30,10 @@ Maybe GitHub will support global workflows some day. I take it into account and 
 
 Name | Description | Required | Default
 --|------|--|--
-github_token | Token to use GitHub API. It must have "repo" and "workflow" scopes so it can push to repo and edit workflows. It cannot be the default GitHub Actions token GITHUB_TOKEN. GitHub Action token's permissions are limited to the repository that contains your workflows. Provide token of the user that has rights to push to the repos that this action is suppose to update. | true | -
+github_token | Token to use GitHub API. It must have "repo" and "workflow" scopes so it can push to repo and edit workflows. It cannot be the default GitHub Actions token GITHUB_TOKEN. GitHub Action token's permissions are limited to the repository that contains your workflows. Provide token of the user who has the right to push to the repos that this action is supposed to update. | true | -
 files_to_ignore | Comma-separated list of workflow files that should be ignored by this action and not updated in other repositories. You must provide here at least the name of the workflow file that uses this action. In the format `file.yml,another_file.yml`. | true | -
-committer_username | The username (not display name) of the committer that will be used in the commit of changes in the workflow file in specific repository. In the format `web-flow`. | false | `web-flow`
-committer_email | The email of the committer that will be used in the commit of changes in the workflow file in specific repository. In the format `noreply@github.com`.| false | `noreply@github.com`
+committer_username | The username (not display name) of the committer will be used to commit changes in the workflow file in a specific repository. In the format `web-flow`. | false | `web-flow`
+committer_email | The committer's email that will be used in the commit of changes in the workflow file in a specific repository. In the format `noreply@github.com`.| false | `noreply@github.com`
 commit_message | It is used as a commit message when pushing changes with global workflows. It is also used as a title of the pull request that is created by this action. | false | `Update global workflows`
 repos_to_ignore | Comma-separated list of repositories that should not get updates from this action. Action already ignores the repo in which the action is triggered so you do not need to add it explicitly. In the format `repo1,repo2`. | false | -
 
@@ -91,7 +91,7 @@ jobs:
                 committer_email: my-email@me.com
                 commit_message: "ci: update global workflows"
     ```
-2. In repositories that will be updated by this workflow you can have the following automerge workflow file:
+2. In repositories that will be updated by this workflow, you can have the following auto-merge workflow file:
     ```yml
     name: Automerge release bump PR
 
@@ -144,7 +144,8 @@ GITHUB_TOKEN=token GITHUB_EVENT_PATH="../test/fake-event.json" GITHUB_REPOSITORY
 
 ## Known Limitations/Hardcodes
 
-* Action looks for file changes only in `.github/workflows` because the intention of this action is to support only global workflows and not any kind of files. This is of course something that can be changed. Please create an issue to further discuss this change.
-* Action is limited to support only **push** event because only this even contains information about commits that were pushed to the repository.
-* Action assumes that **push** event contains information only about one commit. It is very common for many projects and organizations to allow merging only of single commit or merging an squashing commits into one. If you really see a need to support multiple commits on a **push** event then please open an issue and describe your use case and expected behaviour.
-* Action requires you to provide `files_to_ignore` as you need to remember to put there the name of the workflow file where you use this action. Yes, you need to manually provide the name of the file as I [did not find](https://github.community/t/how-can-i-get-the-name-of-the-workflow-file-of-the-workflow-that-was-triggered/145216) a nice way how, in the workflow I can access information about the name of the workflow file. The only idea I have, which is not the best and requires some additional effort, is to read `GITHUB_WORKFLOW` variable and then read contents of worflow files to match the name. I hope you have something better.
+* Action looks for file changes only in `.github/workflows` because it intends to support only global workflows and not any files. This is, of course something that can be changed. Please create an issue to discuss this change further.
+* Action is limited to support only **push** event because only this event contains information about commits that were pushed to the repository.
+* Action assumes that **push** event has information only about one commit. It is very common for many projects and organizations to merge only of single commit or merging and squashing commits into one. If you see a need to support multiple commits on a **push** event, please open an issue and describe your use case and expected behavior.
+* Action requires you to provide `files_to_ignore` as you need to remember to put there the name of the workflow file where you use this action. Yes, you need to manually provide the file's name as I [did not find](https://github.community/t/how-can-i-get-the-name-of-the-workflow-file-of-the-workflow-that-was-triggered/145216) a nice way how, in the workflow, I can access information about the name of the workflow file. The only idea I have, which is not the best and requires some additional effort, is to read `GITHUB_WORKFLOW` variable and then read the workflow files' contents to match the name. I hope you have something better.
+* Action is limited to support users and organizations with 100 or less repositories. Why? I just did not implement pagination handling. Why? I think that larger organizations is just a rare case, but I'm happy to support them if you need. Just drop me an issue.

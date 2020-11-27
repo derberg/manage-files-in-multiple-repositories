@@ -21,7 +21,7 @@
     "type": "git",
     "url": "git+https://github.com/derberg/global-actions-support.git"
   },
-  "author": "MG",
+  "author": "Lukasz Gornicki <lpgornicki@gmail.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/derberg/global-actions-support/issues"
