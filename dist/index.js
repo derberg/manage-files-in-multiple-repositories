@@ -1658,7 +1658,9 @@ exports.Context = Context;
 /***/ }),
 
 /***/ 119:
-/***/ (function(module) {
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const core = __webpack_require__(186);
 
 module.exports = { getReposList, createPr, getCommitFiles };
 
@@ -1709,6 +1711,7 @@ async function getReposList(octokit, owner) {
   } catch (error) {
     const org = error.data.user;
     const user = error.data.organization;
+    core.debug('DEBUG: Full response from graphql with list of repositories for org or user. There will always be an error for one node, user or organization, because we are always asking for both. Look into code to understan why', JSON.stringify(error.data, null, 2));
 
     return org ? org.repositories.nodes : user.repositories.nodes;
   }
@@ -11700,6 +11703,7 @@ async function run() {
     core.endGroup();
     core.info(`Getting list of repositories owned by ${owner} that will get updates. The following repos will be later ignored: ${ignoredRepositories}`);
     const reposList = await getReposList(octokit, owner);
+    core.debug(`DEBUG: list of repositories for ${owner} that this action will iterate over`,  JSON.stringify(reposList, null, 2));
 
     for (const {url, name, id, defaultBranchRef: { name: defaultBranch }} of reposList) {
       if (!ignoredRepositories.includes(name)) {
@@ -12751,6 +12755,8 @@ module.exports = { getListModifiedFiles, copyChangedFiles, parseCommaList };
  */
 async function getListModifiedFiles(octokit, commitId, owner, repo, filesToIgnore) {
   const commitFiles = await getCommitFiles(octokit, commitId, owner, repo);
+  core.debug(`DEBUG: list of commits for ${commitId} that is used to check if there was any file located in .github/workflows modified`,  JSON.stringify(commitFiles, null, 2));
+
   const changedFiles = [];
   const ignoreFilesList = filesToIgnore ? parseCommaList(filesToIgnore) : [];
   

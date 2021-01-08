@@ -13,6 +13,7 @@ GitHub Action that introduces support for global workflows. Global workflows are
   * [Advanced Workflow](#advanced-workflow)
 - [Development](#development)
 - [Known Limitations/Hardcodes](#known-limitationshardcodes)
+- [Debug](#debug)
 
 <!-- tocstop -->
 
@@ -149,3 +150,7 @@ GITHUB_TOKEN=token GITHUB_EVENT_PATH="../test/fake-event.json" GITHUB_REPOSITORY
 * Action assumes that **push** event has information only about one commit. It is very common for many projects and organizations to merge only of single commit or merging and squashing commits into one. If you see a need to support multiple commits on a **push** event, please open an issue and describe your use case and expected behavior.
 * Action requires you to provide `files_to_ignore` as you need to remember to put there the name of the workflow file where you use this action. Yes, you need to manually provide the file's name as I [did not find](https://github.community/t/how-can-i-get-the-name-of-the-workflow-file-of-the-workflow-that-was-triggered/145216) a nice way how, in the workflow, I can access information about the name of the workflow file. The only idea I have, which is not the best and requires some additional effort, is to read `GITHUB_WORKFLOW` variable and then read the workflow files' contents to match the name. I hope you have something better.
 * Action is limited to support users and organizations with 100 or less repositories. Why? I just did not implement pagination handling. Why? I think that larger organizations is just a rare case, but I'm happy to support them if you need. Just drop me an issue.
+
+## Debug
+
+In case something ain't right, the action doesn't work as expected, enable debugging. Add to **Secrets** of the repository a secret called `ACTIONS_STEP_DEBUG` with value `true`. Now, once you run the action again, there will be additional logs visible that start with `DEBUG: `.
