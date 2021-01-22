@@ -6107,13 +6107,12 @@ async function push(token, url, branchName, message, committerUsername, committe
 
   if (core.isDebug()) __webpack_require__(231).enable('simple-git');
 
-  return await git
-    .add('./*')
-    .addConfig('user.name', committerUsername)
-    .addConfig('user.email', committerEmail)
-    .commit(message)
-    .addRemote('auth', authanticatedUrl(token, url, committerUsername))
-    .push(['-u', 'auth', branchName]);
+  await git.add('./*');
+  await git.addConfig('user.name', committerUsername);
+  await git.addConfig('user.email', committerEmail);
+  await git.commit(message);
+  await git.addRemote('auth', authanticatedUrl(token, url, committerUsername));
+  await git.push(['-u', 'auth', branchName]);
 }
   
 
