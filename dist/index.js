@@ -1788,7 +1788,7 @@ async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
     try {
       core.info('Waiting 5sec before PR creation');
       await sleep(5000);
-      core.info(`PR creation attempt${  count}`);
+      core.info(`PR creation attempt ${count}`);
       const { createPullRequest: { pullRequest: { url: pullRequestUrl } } } = await octokit.graphql(createPrMutation, newPrVariables);
       retries = 0;
       return pullRequestUrl;
