@@ -1695,6 +1695,16 @@ const { sleep } = __webpack_require__(918);
 
 module.exports = { getReposList, createPr, getCommitFiles };
 
+async function getCommitFiles(octokit, commitId, owner, repo) {
+  const { data: { files } } = await octokit.repos.getCommit({
+    owner,
+    repo,
+    ref: commitId
+  });
+
+  return files;
+}
+
 async function getReposList(octokit, owner) {
   const reposListQuery = `
     query getReposList($owner: String!){
@@ -1782,16 +1792,6 @@ async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
       return pullRequestUrl;
     }
   }
-}
-
-async function getCommitFiles(octokit, commitId, owner, repo) {
-  const { data: { files } } = await octokit.repos.getCommit({
-    owner,
-    repo,
-    ref: commitId
-  });
-
-  return files;
 }
 
 /***/ }),
