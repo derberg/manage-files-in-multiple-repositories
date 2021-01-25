@@ -13245,11 +13245,11 @@ const simpleGit = __webpack_require__(477);
 const path = __webpack_require__(622);
 const { mkdir } = __webpack_require__(747).promises;
 const { retry } = __webpack_require__(298);
-const { GitHub, getOctokitOptions, sleep } = __webpack_require__(30);
+const { GitHub, getOctokitOptions } = __webpack_require__(30);
 
 const { createBranch, clone, push } = __webpack_require__(374);
 const { getReposList, createPr } = __webpack_require__(119);
-const { getListModifiedFiles, copyChangedFiles, parseCommaList } = __webpack_require__(918);
+const { getListModifiedFiles, copyChangedFiles, parseCommaList, sleep } = __webpack_require__(918);
 
 const eventPayload = require(process.env.GITHUB_EVENT_PATH);
 
