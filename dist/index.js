@@ -14331,8 +14331,8 @@ module.exports = {
 const { copy } = __webpack_require__(630);
 const path = __webpack_require__(622);
 const core = __webpack_require__(186);
-
 const { getCommitFiles } = __webpack_require__(119);
+const cotusie = __webpack_require__(119);
 
 module.exports = { getListModifiedFiles, copyChangedFiles, parseCommaList, sleep };
 
@@ -14346,6 +14346,7 @@ module.exports = { getListModifiedFiles, copyChangedFiles, parseCommaList, sleep
  * @returns {Array<String>} list of filepaths of modified files
  */
 async function getListModifiedFiles(octokit, commitId, owner, repo, filesToIgnore) {
+  console.log('cotusie', cotusie);
   console.log('getCommitFiles', getCommitFiles);
   const commitFiles = await getCommitFiles(octokit, commitId, owner, repo);
   core.debug(`DEBUG: list of commits for ${commitId} that is used to check if there was any file located in .github/workflows modified`,  JSON.stringify(commitFiles, null, 2));
