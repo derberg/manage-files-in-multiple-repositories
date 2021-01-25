@@ -1730,10 +1730,6 @@ async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
           url
         }
       }
-      rateLimit {
-        cost
-        limit
-      }
     }
     `;
 
@@ -1744,8 +1740,7 @@ async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
     defaultBranch
   };
 
-  const { createPullRequest: { pullRequest: { url: pullRequestUrl }, rateLimit: { cost, limit} } } = await octokit.graphql(createPrMutation, newPrVariables);
-  console.log('cost and limit', cost, limit);
+  const { createPullRequest: { pullRequest: { url: pullRequestUrl } } } = await octokit.graphql(createPrMutation, newPrVariables);
   return pullRequestUrl;
 }
 
