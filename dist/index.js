@@ -1693,7 +1693,7 @@ module.exports = require("os");
 const core = __webpack_require__(186);
 const { sleep } = __webpack_require__(918);
 
-module.exports = { getReposList, createPr, getCommitFiles };
+module.exports = { getCommitFiles, getReposList, createPr };
 
 async function getCommitFiles(octokit, commitId, owner, repo) {
   const { data: { files } } = await octokit.repos.getCommit({
