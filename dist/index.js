@@ -1730,6 +1730,10 @@ async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
           url
         }
       }
+      rateLimit {
+        cost
+        limit
+      }
     }
     `;
 
@@ -1740,8 +1744,8 @@ async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
     defaultBranch
   };
 
-  const { createPullRequest: { pullRequest: { url: pullRequestUrl } } } = await octokit.graphql(createPrMutation, newPrVariables);
-
+  const { createPullRequest: { pullRequest: { url: pullRequestUrl }, rateLimit: { cost, limit} } } = await octokit.graphql(createPrMutation, newPrVariables);
+  console.log('cost and limit', cost, limit);
   return pullRequestUrl;
 }
 
@@ -13356,6 +13360,8 @@ async function run() {
       }
     }
   } catch (error) {
+    console.log('message', error.message);
+    console.log('data', error.data);
     core.setFailed(`Action failed because of: ${ error}`);
   }
 }
