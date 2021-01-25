@@ -1780,15 +1780,20 @@ async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
     defaultBranch
   };
 
-  try {
-    const { createPullRequest: { pullRequest: { url: pullRequestUrl } } } = await octokit.graphql(createPrMutation, newPrVariables);
-    return pullRequestUrl;
-  } catch (error) {
-    if (error.message === 'was submitted too quickly') {
-      core.info('Waiting 5sec and retry PR creation as 1st attempt failed');
+  let retries = 5;
+  let count = 0;
+
+  while (retries-- > 0) {
+    count++;
+    try {
+      core.info('Waiting 5sec before PR creation');
       await sleep(5000);
+      core.info(`PR creation attempt${  count}`);
       const { createPullRequest: { pullRequest: { url: pullRequestUrl } } } = await octokit.graphql(createPrMutation, newPrVariables);
+      retries = 0;
       return pullRequestUrl;
+    } catch (error) {
+      if (error.message !== 'was submitted too quickly') retries = 0;
     }
   }
 
@@ -13317,7 +13322,6 @@ async function run() {
         await copyChangedFiles(modifiedFiles, dir);
         core.info('Pushing changes to remote');
         await push(gitHubKey, url, branchName, commitMessage, committerUsername, committerEmail, git);
-        core.info('Creating a pull request');
         const pullRequestUrl = await createPr(myOctokit, branchName, id, commitMessage, defaultBranch);
         core.endGroup();
         core.info(`Workflow finished with success and PR for ${name} is created -> ${pullRequestUrl}`);
