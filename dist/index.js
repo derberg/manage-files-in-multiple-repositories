@@ -1771,8 +1771,6 @@ async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
     defaultBranch
   };
 
-  const { createPullRequest: { pullRequest: { url: pullRequestUrl } } } = await octokit.graphql(createPrMutation, newPrVariables);
-
   try {
     const { createPullRequest: { pullRequest: { url: pullRequestUrl } } } = await octokit.graphql(createPrMutation, newPrVariables);
     return pullRequestUrl;
