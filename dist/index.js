@@ -13320,7 +13320,7 @@ async function run() {
         core.info(`Workflow finished with success and PR for ${name} is created -> ${pullRequestUrl}`);
       }
     }
-  } catch (error) {    
+  } catch (error) {
     core.setFailed(`Action failed because of: ${ error}`);
   }
 }
@@ -14346,6 +14346,7 @@ module.exports = { getListModifiedFiles, copyChangedFiles, parseCommaList, sleep
  * @returns {Array<String>} list of filepaths of modified files
  */
 async function getListModifiedFiles(octokit, commitId, owner, repo, filesToIgnore) {
+  console.log('getCommitFiles', getCommitFiles);
   const commitFiles = await getCommitFiles(octokit, commitId, owner, repo);
   core.debug(`DEBUG: list of commits for ${commitId} that is used to check if there was any file located in .github/workflows modified`,  JSON.stringify(commitFiles, null, 2));
 
