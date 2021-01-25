@@ -1691,6 +1691,7 @@ module.exports = require("os");
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
 const core = __webpack_require__(186);
+const { sleep } = __webpack_require__(918);
 
 module.exports = { getReposList, createPr, getCommitFiles };
 
@@ -1771,7 +1772,18 @@ async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
   };
 
   const { createPullRequest: { pullRequest: { url: pullRequestUrl } } } = await octokit.graphql(createPrMutation, newPrVariables);
-  return pullRequestUrl;
+
+  try {
+    const { createPullRequest: { pullRequest: { url: pullRequestUrl } } } = await octokit.graphql(createPrMutation, newPrVariables);
+    return pullRequestUrl;
+  } catch (error) {
+    if (error.message === 'was submitted too quickly') {
+      core.info('Waiting 5sec and retry PR creation as 1st attempt failed');
+      await sleep(5000);
+      const { createPullRequest: { pullRequest: { url: pullRequestUrl } } } = await octokit.graphql(createPrMutation, newPrVariables);
+      return pullRequestUrl;
+    }
+  }
 }
 
 async function getCommitFiles(octokit, commitId, owner, repo) {
@@ -13249,7 +13261,7 @@ const { GitHub, getOctokitOptions } = __webpack_require__(30);
 
 const { createBranch, clone, push } = __webpack_require__(374);
 const { getReposList, createPr } = __webpack_require__(119);
-const { getListModifiedFiles, copyChangedFiles, parseCommaList, sleep } = __webpack_require__(918);
+const { getListModifiedFiles, copyChangedFiles, parseCommaList } = __webpack_require__(918);
 
 const eventPayload = require(process.env.GITHUB_EVENT_PATH);
 
@@ -13304,15 +13316,13 @@ async function run() {
         await copyChangedFiles(modifiedFiles, dir);
         core.info('Pushing changes to remote');
         await push(gitHubKey, url, branchName, commitMessage, committerUsername, committerEmail, git);
-        core.info('Waiting 5sec before PR creation');
-        await sleep(5000);
         core.info('Creating a pull request');
         const pullRequestUrl = await createPr(myOctokit, branchName, id, commitMessage, defaultBranch);
         core.endGroup();
         core.info(`Workflow finished with success and PR for ${name} is created -> ${pullRequestUrl}`);
       }
     }
-  } catch (error) {
+  } catch (error) {    
     core.setFailed(`Action failed because of: ${ error}`);
   }
 }
