@@ -50,9 +50,32 @@ module.exports =
 /******/ ({
 
 /***/ 16:
-/***/ (function(module) {
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
 
-module.exports = require("tls");
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const InitSummary_1 = __webpack_require__(690);
+const bareCommand = '--bare';
+function hasBareCommand(command) {
+    return command.includes(bareCommand);
+}
+function initTask(bare = false, path, customArgs) {
+    const commands = ['init', ...customArgs];
+    if (bare && !hasBareCommand(commands)) {
+        commands.splice(1, 0, bareCommand);
+    }
+    return {
+        commands,
+        concatStdErr: false,
+        format: 'utf-8',
+        parser(text) {
+            return InitSummary_1.parseInit(commands.includes('--bare'), path, text);
+        }
+    };
+}
+exports.initTask = initTask;
+//# sourceMappingURL=init.js.map
 
 /***/ }),
 
@@ -166,7 +189,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getOctokitOptions = exports.GitHub = exports.context = void 0;
-const Context = __importStar(__webpack_require__(87));
+const Context = __importStar(__webpack_require__(53));
 const Utils = __importStar(__webpack_require__(914));
 // octokit + plugins
 const core_1 = __webpack_require__(762);
@@ -1535,6 +1558,63 @@ module.exports = {
 
 /***/ }),
 
+/***/ 53:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Context = void 0;
+const fs_1 = __webpack_require__(747);
+const os_1 = __webpack_require__(87);
+class Context {
+    /**
+     * Hydrate the context from the environment
+     */
+    constructor() {
+        this.payload = {};
+        if (process.env.GITHUB_EVENT_PATH) {
+            if (fs_1.existsSync(process.env.GITHUB_EVENT_PATH)) {
+                this.payload = JSON.parse(fs_1.readFileSync(process.env.GITHUB_EVENT_PATH, { encoding: 'utf8' }));
+            }
+            else {
+                const path = process.env.GITHUB_EVENT_PATH;
+                process.stdout.write(`GITHUB_EVENT_PATH ${path} does not exist${os_1.EOL}`);
+            }
+        }
+        this.eventName = process.env.GITHUB_EVENT_NAME;
+        this.sha = process.env.GITHUB_SHA;
+        this.ref = process.env.GITHUB_REF;
+        this.workflow = process.env.GITHUB_WORKFLOW;
+        this.action = process.env.GITHUB_ACTION;
+        this.actor = process.env.GITHUB_ACTOR;
+        this.job = process.env.GITHUB_JOB;
+        this.runNumber = parseInt(process.env.GITHUB_RUN_NUMBER, 10);
+        this.runId = parseInt(process.env.GITHUB_RUN_ID, 10);
+    }
+    get issue() {
+        const payload = this.payload;
+        return Object.assign(Object.assign({}, this.repo), { number: (payload.issue || payload.pull_request || payload).number });
+    }
+    get repo() {
+        if (process.env.GITHUB_REPOSITORY) {
+            const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
+            return { owner, repo };
+        }
+        if (this.payload.repository) {
+            return {
+                owner: this.payload.repository.owner.login,
+                repo: this.payload.repository.name
+            };
+        }
+        throw new Error("context.repo requires a GITHUB_REPOSITORY environment variable like 'owner/repo'");
+    }
+}
+exports.Context = Context;
+//# sourceMappingURL=context.js.map
+
+/***/ }),
+
 /***/ 55:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -1601,59 +1681,9 @@ exports.hasBranchDeletionError = hasBranchDeletionError;
 /***/ }),
 
 /***/ 87:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
+/***/ (function(module) {
 
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.Context = void 0;
-const fs_1 = __webpack_require__(747);
-const os_1 = __webpack_require__(365);
-class Context {
-    /**
-     * Hydrate the context from the environment
-     */
-    constructor() {
-        this.payload = {};
-        if (process.env.GITHUB_EVENT_PATH) {
-            if (fs_1.existsSync(process.env.GITHUB_EVENT_PATH)) {
-                this.payload = JSON.parse(fs_1.readFileSync(process.env.GITHUB_EVENT_PATH, { encoding: 'utf8' }));
-            }
-            else {
-                const path = process.env.GITHUB_EVENT_PATH;
-                process.stdout.write(`GITHUB_EVENT_PATH ${path} does not exist${os_1.EOL}`);
-            }
-        }
-        this.eventName = process.env.GITHUB_EVENT_NAME;
-        this.sha = process.env.GITHUB_SHA;
-        this.ref = process.env.GITHUB_REF;
-        this.workflow = process.env.GITHUB_WORKFLOW;
-        this.action = process.env.GITHUB_ACTION;
-        this.actor = process.env.GITHUB_ACTOR;
-        this.job = process.env.GITHUB_JOB;
-        this.runNumber = parseInt(process.env.GITHUB_RUN_NUMBER, 10);
-        this.runId = parseInt(process.env.GITHUB_RUN_ID, 10);
-    }
-    get issue() {
-        const payload = this.payload;
-        return Object.assign(Object.assign({}, this.repo), { number: (payload.issue || payload.pull_request || payload).number });
-    }
-    get repo() {
-        if (process.env.GITHUB_REPOSITORY) {
-            const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
-            return { owner, repo };
-        }
-        if (this.payload.repository) {
-            return {
-                owner: this.payload.repository.owner.login,
-                repo: this.payload.repository.name
-            };
-        }
-        throw new Error("context.repo requires a GITHUB_REPOSITORY environment variable like 'owner/repo'");
-    }
-}
-exports.Context = Context;
-//# sourceMappingURL=context.js.map
+module.exports = require("os");
 
 /***/ }),
 
@@ -4090,7 +4120,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const command_1 = __webpack_require__(351);
 const file_command_1 = __webpack_require__(717);
 const utils_1 = __webpack_require__(278);
-const os = __importStar(__webpack_require__(365));
+const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 /**
  * The code to exit an action
@@ -4526,270 +4556,59 @@ exports.createInstanceConfig = createInstanceConfig;
 
 "use strict";
 
-
-var net = __webpack_require__(631);
-var tls = __webpack_require__(16);
-var http = __webpack_require__(605);
-var https = __webpack_require__(211);
-var events = __webpack_require__(614);
-var assert = __webpack_require__(357);
-var util = __webpack_require__(669);
-
-
-exports.httpOverHttp = httpOverHttp;
-exports.httpsOverHttp = httpsOverHttp;
-exports.httpOverHttps = httpOverHttps;
-exports.httpsOverHttps = httpsOverHttps;
-
-
-function httpOverHttp(options) {
-  var agent = new TunnelingAgent(options);
-  agent.request = http.request;
-  return agent;
-}
-
-function httpsOverHttp(options) {
-  var agent = new TunnelingAgent(options);
-  agent.request = http.request;
-  agent.createSocket = createSecureSocket;
-  agent.defaultPort = 443;
-  return agent;
-}
-
-function httpOverHttps(options) {
-  var agent = new TunnelingAgent(options);
-  agent.request = https.request;
-  return agent;
-}
-
-function httpsOverHttps(options) {
-  var agent = new TunnelingAgent(options);
-  agent.request = https.request;
-  agent.createSocket = createSecureSocket;
-  agent.defaultPort = 443;
-  return agent;
-}
-
-
-function TunnelingAgent(options) {
-  var self = this;
-  self.options = options || {};
-  self.proxyOptions = self.options.proxy || {};
-  self.maxSockets = self.options.maxSockets || http.Agent.defaultMaxSockets;
-  self.requests = [];
-  self.sockets = [];
-
-  self.on('free', function onFree(socket, host, port, localAddress) {
-    var options = toOptions(host, port, localAddress);
-    for (var i = 0, len = self.requests.length; i < len; ++i) {
-      var pending = self.requests[i];
-      if (pending.host === options.host && pending.port === options.port) {
-        // Detect the request to connect same origin server,
-        // reuse the connection.
-        self.requests.splice(i, 1);
-        pending.request.onSocket(socket);
-        return;
-      }
+Object.defineProperty(exports, "__esModule", { value: true });
+const utils_1 = __webpack_require__(847);
+class ConfigList {
+    constructor() {
+        this.files = [];
+        this.values = Object.create(null);
     }
-    socket.destroy();
-    self.removeSocket(socket);
-  });
-}
-util.inherits(TunnelingAgent, events.EventEmitter);
-
-TunnelingAgent.prototype.addRequest = function addRequest(req, host, port, localAddress) {
-  var self = this;
-  var options = mergeOptions({request: req}, self.options, toOptions(host, port, localAddress));
-
-  if (self.sockets.length >= this.maxSockets) {
-    // We are over limit so we'll add it to the queue.
-    self.requests.push(options);
-    return;
-  }
-
-  // If we are under maxSockets create a new one.
-  self.createSocket(options, function(socket) {
-    socket.on('free', onFree);
-    socket.on('close', onCloseOrRemove);
-    socket.on('agentRemove', onCloseOrRemove);
-    req.onSocket(socket);
-
-    function onFree() {
-      self.emit('free', socket, options);
-    }
-
-    function onCloseOrRemove(err) {
-      self.removeSocket(socket);
-      socket.removeListener('free', onFree);
-      socket.removeListener('close', onCloseOrRemove);
-      socket.removeListener('agentRemove', onCloseOrRemove);
-    }
-  });
-};
-
-TunnelingAgent.prototype.createSocket = function createSocket(options, cb) {
-  var self = this;
-  var placeholder = {};
-  self.sockets.push(placeholder);
-
-  var connectOptions = mergeOptions({}, self.proxyOptions, {
-    method: 'CONNECT',
-    path: options.host + ':' + options.port,
-    agent: false,
-    headers: {
-      host: options.host + ':' + options.port
-    }
-  });
-  if (options.localAddress) {
-    connectOptions.localAddress = options.localAddress;
-  }
-  if (connectOptions.proxyAuth) {
-    connectOptions.headers = connectOptions.headers || {};
-    connectOptions.headers['Proxy-Authorization'] = 'Basic ' +
-        new Buffer(connectOptions.proxyAuth).toString('base64');
-  }
-
-  debug('making CONNECT request');
-  var connectReq = self.request(connectOptions);
-  connectReq.useChunkedEncodingByDefault = false; // for v0.6
-  connectReq.once('response', onResponse); // for v0.6
-  connectReq.once('upgrade', onUpgrade);   // for v0.6
-  connectReq.once('connect', onConnect);   // for v0.7 or later
-  connectReq.once('error', onError);
-  connectReq.end();
-
-  function onResponse(res) {
-    // Very hacky. This is necessary to avoid http-parser leaks.
-    res.upgrade = true;
-  }
-
-  function onUpgrade(res, socket, head) {
-    // Hacky.
-    process.nextTick(function() {
-      onConnect(res, socket, head);
-    });
-  }
-
-  function onConnect(res, socket, head) {
-    connectReq.removeAllListeners();
-    socket.removeAllListeners();
-
-    if (res.statusCode !== 200) {
-      debug('tunneling socket could not be established, statusCode=%d',
-        res.statusCode);
-      socket.destroy();
-      var error = new Error('tunneling socket could not be established, ' +
-        'statusCode=' + res.statusCode);
-      error.code = 'ECONNRESET';
-      options.request.emit('error', error);
-      self.removeSocket(placeholder);
-      return;
-    }
-    if (head.length > 0) {
-      debug('got illegal response body from proxy');
-      socket.destroy();
-      var error = new Error('got illegal response body from proxy');
-      error.code = 'ECONNRESET';
-      options.request.emit('error', error);
-      self.removeSocket(placeholder);
-      return;
-    }
-    debug('tunneling connection has established');
-    self.sockets[self.sockets.indexOf(placeholder)] = socket;
-    return cb(socket);
-  }
-
-  function onError(cause) {
-    connectReq.removeAllListeners();
-
-    debug('tunneling socket could not be established, cause=%s\n',
-          cause.message, cause.stack);
-    var error = new Error('tunneling socket could not be established, ' +
-                          'cause=' + cause.message);
-    error.code = 'ECONNRESET';
-    options.request.emit('error', error);
-    self.removeSocket(placeholder);
-  }
-};
-
-TunnelingAgent.prototype.removeSocket = function removeSocket(socket) {
-  var pos = this.sockets.indexOf(socket)
-  if (pos === -1) {
-    return;
-  }
-  this.sockets.splice(pos, 1);
-
-  var pending = this.requests.shift();
-  if (pending) {
-    // If we have pending requests and a socket gets closed a new one
-    // needs to be created to take over in the pool for the one that closed.
-    this.createSocket(pending, function(socket) {
-      pending.request.onSocket(socket);
-    });
-  }
-};
-
-function createSecureSocket(options, cb) {
-  var self = this;
-  TunnelingAgent.prototype.createSocket.call(self, options, function(socket) {
-    var hostHeader = options.request.getHeader('host');
-    var tlsOptions = mergeOptions({}, self.options, {
-      socket: socket,
-      servername: hostHeader ? hostHeader.replace(/:.*$/, '') : options.host
-    });
-
-    // 0 is dummy port for v0.6
-    var secureSocket = tls.connect(0, tlsOptions);
-    self.sockets[self.sockets.indexOf(socket)] = secureSocket;
-    cb(secureSocket);
-  });
-}
-
-
-function toOptions(host, port, localAddress) {
-  if (typeof host === 'string') { // since v0.10
-    return {
-      host: host,
-      port: port,
-      localAddress: localAddress
-    };
-  }
-  return host; // for v0.11 or later
-}
-
-function mergeOptions(target) {
-  for (var i = 1, len = arguments.length; i < len; ++i) {
-    var overrides = arguments[i];
-    if (typeof overrides === 'object') {
-      var keys = Object.keys(overrides);
-      for (var j = 0, keyLen = keys.length; j < keyLen; ++j) {
-        var k = keys[j];
-        if (overrides[k] !== undefined) {
-          target[k] = overrides[k];
+    get all() {
+        if (!this._all) {
+            this._all = this.files.reduce((all, file) => {
+                return Object.assign(all, this.values[file]);
+            }, {});
         }
-      }
+        return this._all;
     }
-  }
-  return target;
-}
-
-
-var debug;
-if (process.env.NODE_DEBUG && /\btunnel\b/.test(process.env.NODE_DEBUG)) {
-  debug = function() {
-    var args = Array.prototype.slice.call(arguments);
-    if (typeof args[0] === 'string') {
-      args[0] = 'TUNNEL: ' + args[0];
-    } else {
-      args.unshift('TUNNEL:');
+    addFile(file) {
+        if (!(file in this.values)) {
+            const latest = utils_1.last(this.files);
+            this.values[file] = latest ? Object.create(this.values[latest]) : {};
+            this.files.push(file);
+        }
+        return this.values[file];
     }
-    console.error.apply(console, args);
-  }
-} else {
-  debug = function() {};
+    addValue(file, key, value) {
+        const values = this.addFile(file);
+        if (!values.hasOwnProperty(key)) {
+            values[key] = value;
+        }
+        else if (Array.isArray(values[key])) {
+            values[key].push(value);
+        }
+        else {
+            values[key] = [values[key], value];
+        }
+        this._all = undefined;
+    }
 }
-exports.debug = debug; // for test
-
+exports.ConfigList = ConfigList;
+function configListParser(text) {
+    const config = new ConfigList();
+    const lines = text.split('\0');
+    for (let i = 0, max = lines.length - 1; i < max;) {
+        const file = configFilePath(lines[i++]);
+        const [key, value] = utils_1.splitOn(lines[i++], '\n');
+        config.addValue(file, key, value);
+    }
+    return config;
+}
+exports.configListParser = configListParser;
+function configFilePath(filePath) {
+    return filePath.replace(/^(file):/, '');
+}
+//# sourceMappingURL=ConfigList.js.map
 
 /***/ }),
 
@@ -6741,7 +6560,7 @@ function binaryFileChange (line, files) {
 /***/ 294:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-module.exports = __webpack_require__(219);
+module.exports = __webpack_require__(559);
 
 
 /***/ }),
@@ -6848,7 +6667,7 @@ module.exports = {
 
 "use strict";
 
-const os = __webpack_require__(365);
+const os = __webpack_require__(87);
 const hasFlag = __webpack_require__(621);
 
 const env = process.env;
@@ -7510,7 +7329,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const os = __importStar(__webpack_require__(365));
+const os = __importStar(__webpack_require__(87));
 const utils_1 = __webpack_require__(278);
 /**
  * Commands
@@ -7614,13 +7433,6 @@ function clone (obj) {
 /***/ (function(module) {
 
 module.exports = require("assert");
-
-/***/ }),
-
-/***/ 365:
-/***/ (function(module) {
-
-module.exports = require("os");
 
 /***/ }),
 
@@ -7922,7 +7734,7 @@ module.exports = require("stream");
 
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = __webpack_require__(847);
-const promise_deferred_1 = __webpack_require__(613);
+const promise_deferred_1 = __webpack_require__(819);
 const git_logger_1 = __webpack_require__(178);
 const logger = git_logger_1.createLogger('', 'scheduler');
 const createScheduledTask = (() => {
@@ -8027,49 +7839,6 @@ function pushTask(ref = {}, customArgs) {
 }
 exports.pushTask = pushTask;
 //# sourceMappingURL=push.js.map
-
-/***/ }),
-
-/***/ 438:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.getOctokit = exports.context = void 0;
-const Context = __importStar(__webpack_require__(87));
-const utils_1 = __webpack_require__(30);
-exports.context = new Context.Context();
-/**
- * Returns a hydrated octokit ready to use for GitHub Actions
- *
- * @param     token    the repo PAT or GITHUB_TOKEN
- * @param     options  other options to set
- */
-function getOctokit(token, options) {
-    return new utils_1.GitHub(utils_1.getOctokitOptions(token, options));
-}
-exports.getOctokit = getOctokit;
-//# sourceMappingURL=github.js.map
 
 /***/ }),
 
@@ -11071,6 +10840,278 @@ function addHook (state, kind, name, hook) {
 
 /***/ }),
 
+/***/ 559:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+
+var net = __webpack_require__(631);
+var tls = __webpack_require__(818);
+var http = __webpack_require__(605);
+var https = __webpack_require__(211);
+var events = __webpack_require__(614);
+var assert = __webpack_require__(357);
+var util = __webpack_require__(669);
+
+
+exports.httpOverHttp = httpOverHttp;
+exports.httpsOverHttp = httpsOverHttp;
+exports.httpOverHttps = httpOverHttps;
+exports.httpsOverHttps = httpsOverHttps;
+
+
+function httpOverHttp(options) {
+  var agent = new TunnelingAgent(options);
+  agent.request = http.request;
+  return agent;
+}
+
+function httpsOverHttp(options) {
+  var agent = new TunnelingAgent(options);
+  agent.request = http.request;
+  agent.createSocket = createSecureSocket;
+  agent.defaultPort = 443;
+  return agent;
+}
+
+function httpOverHttps(options) {
+  var agent = new TunnelingAgent(options);
+  agent.request = https.request;
+  return agent;
+}
+
+function httpsOverHttps(options) {
+  var agent = new TunnelingAgent(options);
+  agent.request = https.request;
+  agent.createSocket = createSecureSocket;
+  agent.defaultPort = 443;
+  return agent;
+}
+
+
+function TunnelingAgent(options) {
+  var self = this;
+  self.options = options || {};
+  self.proxyOptions = self.options.proxy || {};
+  self.maxSockets = self.options.maxSockets || http.Agent.defaultMaxSockets;
+  self.requests = [];
+  self.sockets = [];
+
+  self.on('free', function onFree(socket, host, port, localAddress) {
+    var options = toOptions(host, port, localAddress);
+    for (var i = 0, len = self.requests.length; i < len; ++i) {
+      var pending = self.requests[i];
+      if (pending.host === options.host && pending.port === options.port) {
+        // Detect the request to connect same origin server,
+        // reuse the connection.
+        self.requests.splice(i, 1);
+        pending.request.onSocket(socket);
+        return;
+      }
+    }
+    socket.destroy();
+    self.removeSocket(socket);
+  });
+}
+util.inherits(TunnelingAgent, events.EventEmitter);
+
+TunnelingAgent.prototype.addRequest = function addRequest(req, host, port, localAddress) {
+  var self = this;
+  var options = mergeOptions({request: req}, self.options, toOptions(host, port, localAddress));
+
+  if (self.sockets.length >= this.maxSockets) {
+    // We are over limit so we'll add it to the queue.
+    self.requests.push(options);
+    return;
+  }
+
+  // If we are under maxSockets create a new one.
+  self.createSocket(options, function(socket) {
+    socket.on('free', onFree);
+    socket.on('close', onCloseOrRemove);
+    socket.on('agentRemove', onCloseOrRemove);
+    req.onSocket(socket);
+
+    function onFree() {
+      self.emit('free', socket, options);
+    }
+
+    function onCloseOrRemove(err) {
+      self.removeSocket(socket);
+      socket.removeListener('free', onFree);
+      socket.removeListener('close', onCloseOrRemove);
+      socket.removeListener('agentRemove', onCloseOrRemove);
+    }
+  });
+};
+
+TunnelingAgent.prototype.createSocket = function createSocket(options, cb) {
+  var self = this;
+  var placeholder = {};
+  self.sockets.push(placeholder);
+
+  var connectOptions = mergeOptions({}, self.proxyOptions, {
+    method: 'CONNECT',
+    path: options.host + ':' + options.port,
+    agent: false,
+    headers: {
+      host: options.host + ':' + options.port
+    }
+  });
+  if (options.localAddress) {
+    connectOptions.localAddress = options.localAddress;
+  }
+  if (connectOptions.proxyAuth) {
+    connectOptions.headers = connectOptions.headers || {};
+    connectOptions.headers['Proxy-Authorization'] = 'Basic ' +
+        new Buffer(connectOptions.proxyAuth).toString('base64');
+  }
+
+  debug('making CONNECT request');
+  var connectReq = self.request(connectOptions);
+  connectReq.useChunkedEncodingByDefault = false; // for v0.6
+  connectReq.once('response', onResponse); // for v0.6
+  connectReq.once('upgrade', onUpgrade);   // for v0.6
+  connectReq.once('connect', onConnect);   // for v0.7 or later
+  connectReq.once('error', onError);
+  connectReq.end();
+
+  function onResponse(res) {
+    // Very hacky. This is necessary to avoid http-parser leaks.
+    res.upgrade = true;
+  }
+
+  function onUpgrade(res, socket, head) {
+    // Hacky.
+    process.nextTick(function() {
+      onConnect(res, socket, head);
+    });
+  }
+
+  function onConnect(res, socket, head) {
+    connectReq.removeAllListeners();
+    socket.removeAllListeners();
+
+    if (res.statusCode !== 200) {
+      debug('tunneling socket could not be established, statusCode=%d',
+        res.statusCode);
+      socket.destroy();
+      var error = new Error('tunneling socket could not be established, ' +
+        'statusCode=' + res.statusCode);
+      error.code = 'ECONNRESET';
+      options.request.emit('error', error);
+      self.removeSocket(placeholder);
+      return;
+    }
+    if (head.length > 0) {
+      debug('got illegal response body from proxy');
+      socket.destroy();
+      var error = new Error('got illegal response body from proxy');
+      error.code = 'ECONNRESET';
+      options.request.emit('error', error);
+      self.removeSocket(placeholder);
+      return;
+    }
+    debug('tunneling connection has established');
+    self.sockets[self.sockets.indexOf(placeholder)] = socket;
+    return cb(socket);
+  }
+
+  function onError(cause) {
+    connectReq.removeAllListeners();
+
+    debug('tunneling socket could not be established, cause=%s\n',
+          cause.message, cause.stack);
+    var error = new Error('tunneling socket could not be established, ' +
+                          'cause=' + cause.message);
+    error.code = 'ECONNRESET';
+    options.request.emit('error', error);
+    self.removeSocket(placeholder);
+  }
+};
+
+TunnelingAgent.prototype.removeSocket = function removeSocket(socket) {
+  var pos = this.sockets.indexOf(socket)
+  if (pos === -1) {
+    return;
+  }
+  this.sockets.splice(pos, 1);
+
+  var pending = this.requests.shift();
+  if (pending) {
+    // If we have pending requests and a socket gets closed a new one
+    // needs to be created to take over in the pool for the one that closed.
+    this.createSocket(pending, function(socket) {
+      pending.request.onSocket(socket);
+    });
+  }
+};
+
+function createSecureSocket(options, cb) {
+  var self = this;
+  TunnelingAgent.prototype.createSocket.call(self, options, function(socket) {
+    var hostHeader = options.request.getHeader('host');
+    var tlsOptions = mergeOptions({}, self.options, {
+      socket: socket,
+      servername: hostHeader ? hostHeader.replace(/:.*$/, '') : options.host
+    });
+
+    // 0 is dummy port for v0.6
+    var secureSocket = tls.connect(0, tlsOptions);
+    self.sockets[self.sockets.indexOf(socket)] = secureSocket;
+    cb(secureSocket);
+  });
+}
+
+
+function toOptions(host, port, localAddress) {
+  if (typeof host === 'string') { // since v0.10
+    return {
+      host: host,
+      port: port,
+      localAddress: localAddress
+    };
+  }
+  return host; // for v0.11 or later
+}
+
+function mergeOptions(target) {
+  for (var i = 1, len = arguments.length; i < len; ++i) {
+    var overrides = arguments[i];
+    if (typeof overrides === 'object') {
+      var keys = Object.keys(overrides);
+      for (var j = 0, keyLen = keys.length; j < keyLen; ++j) {
+        var k = keys[j];
+        if (overrides[k] !== undefined) {
+          target[k] = overrides[k];
+        }
+      }
+    }
+  }
+  return target;
+}
+
+
+var debug;
+if (process.env.NODE_DEBUG && /\btunnel\b/.test(process.env.NODE_DEBUG)) {
+  debug = function() {
+    var args = Array.prototype.slice.call(arguments);
+    if (typeof args[0] === 'string') {
+      args[0] = 'TUNNEL: ' + args[0];
+    } else {
+      args.unshift('TUNNEL:');
+    }
+    console.error.apply(console, args);
+  }
+} else {
+  debug = function() {};
+}
+exports.debug = debug; // for test
+
+
+/***/ }),
+
 /***/ 562:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -11293,7 +11334,7 @@ exports.GitOutputStreams = GitOutputStreams;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const ConfigList_1 = __webpack_require__(628);
+const ConfigList_1 = __webpack_require__(219);
 function addConfigTask(key, value, append = false) {
     const commands = ['config', '--local'];
     if (append) {
@@ -11327,72 +11368,6 @@ exports.listConfigTask = listConfigTask;
 /***/ (function(module) {
 
 module.exports = require("http");
-
-/***/ }),
-
-/***/ 613:
-/***/ (function(__unusedmodule, exports) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.createDeferred = exports.deferred = void 0;
-/**
- * Creates a new `DeferredPromise`
- *
- * ```typescript
- import {deferred} from '@kwsites/promise-deferred`;
- ```
- */
-function deferred() {
-    let done;
-    let fail;
-    let status = 'pending';
-    const promise = new Promise((_done, _fail) => {
-        done = _done;
-        fail = _fail;
-    });
-    return {
-        promise,
-        done(result) {
-            if (status === 'pending') {
-                status = 'resolved';
-                done(result);
-            }
-        },
-        fail(error) {
-            if (status === 'pending') {
-                status = 'rejected';
-                fail(error);
-            }
-        },
-        get fulfilled() {
-            return status !== 'pending';
-        },
-        get status() {
-            return status;
-        },
-    };
-}
-exports.deferred = deferred;
-/**
- * Alias of the exported `deferred` function, to help consumers wanting to use `deferred` as the
- * local variable name rather than the factory import name, without needing to rename on import.
- *
- * ```typescript
- import {createDeferred} from '@kwsites/promise-deferred`;
- ```
- */
-exports.createDeferred = deferred;
-/**
- * Default export allows use as:
- *
- * ```typescript
- import deferred from '@kwsites/promise-deferred`;
- ```
- */
-exports.default = deferred;
-//# sourceMappingURL=index.js.map
 
 /***/ }),
 
@@ -11430,67 +11405,6 @@ module.exports = (flag, argv) => {
 /***/ (function(module) {
 
 module.exports = require("path");
-
-/***/ }),
-
-/***/ 628:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const utils_1 = __webpack_require__(847);
-class ConfigList {
-    constructor() {
-        this.files = [];
-        this.values = Object.create(null);
-    }
-    get all() {
-        if (!this._all) {
-            this._all = this.files.reduce((all, file) => {
-                return Object.assign(all, this.values[file]);
-            }, {});
-        }
-        return this._all;
-    }
-    addFile(file) {
-        if (!(file in this.values)) {
-            const latest = utils_1.last(this.files);
-            this.values[file] = latest ? Object.create(this.values[latest]) : {};
-            this.files.push(file);
-        }
-        return this.values[file];
-    }
-    addValue(file, key, value) {
-        const values = this.addFile(file);
-        if (!values.hasOwnProperty(key)) {
-            values[key] = value;
-        }
-        else if (Array.isArray(values[key])) {
-            values[key].push(value);
-        }
-        else {
-            values[key] = [values[key], value];
-        }
-        this._all = undefined;
-    }
-}
-exports.ConfigList = ConfigList;
-function configListParser(text) {
-    const config = new ConfigList();
-    const lines = text.split('\0');
-    for (let i = 0, max = lines.length - 1; i < max;) {
-        const file = configFilePath(lines[i++]);
-        const [key, value] = utils_1.splitOn(lines[i++], '\n');
-        config.addValue(file, key, value);
-    }
-    return config;
-}
-exports.configListParser = configListParser;
-function configFilePath(filePath) {
-    return filePath.replace(/^(file):/, '');
-}
-//# sourceMappingURL=ConfigList.js.map
 
 /***/ }),
 
@@ -11921,7 +11835,7 @@ TasksPendingQueue.counter = 0;
 
 var register = __webpack_require__(670)
 var addHook = __webpack_require__(549)
-var removeHook = __webpack_require__(819)
+var removeHook = __webpack_require__(726)
 
 // bind with array of arguments: https://stackoverflow.com/a/21792913
 var bind = Function.bind
@@ -12099,7 +12013,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // We use any as a valid input type
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const fs = __importStar(__webpack_require__(747));
-const os = __importStar(__webpack_require__(365));
+const os = __importStar(__webpack_require__(87));
 const utils_1 = __webpack_require__(278);
 function issueCommand(command, message) {
     const filePath = process.env[`GITHUB_${command}`];
@@ -12115,6 +12029,30 @@ function issueCommand(command, message) {
 }
 exports.issueCommand = issueCommand;
 //# sourceMappingURL=file-command.js.map
+
+/***/ }),
+
+/***/ 726:
+/***/ (function(module) {
+
+module.exports = removeHook
+
+function removeHook (state, name, method) {
+  if (!state.registry[name]) {
+    return
+  }
+
+  var index = state.registry[name]
+    .map(function (registered) { return registered.orig })
+    .indexOf(method)
+
+  if (index === -1) {
+    return
+  }
+
+  state.registry[name].splice(index, 1)
+}
+
 
 /***/ }),
 
@@ -12927,36 +12865,6 @@ exports.Octokit = Octokit;
 
 /***/ }),
 
-/***/ 765:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const InitSummary_1 = __webpack_require__(690);
-const bareCommand = '--bare';
-function hasBareCommand(command) {
-    return command.includes(bareCommand);
-}
-function initTask(bare = false, path, customArgs) {
-    const commands = ['init', ...customArgs];
-    if (bare && !hasBareCommand(commands)) {
-        commands.splice(1, 0, bareCommand);
-    }
-    return {
-        commands,
-        concatStdErr: false,
-        format: 'utf-8',
-        parser(text) {
-            return InitSummary_1.parseInit(commands.includes('--bare'), path, text);
-        }
-    };
-}
-exports.initTask = initTask;
-//# sourceMappingURL=init.js.map
-
-/***/ }),
-
 /***/ 772:
 /***/ (function(__unusedmodule, exports, __webpack_require__) {
 
@@ -13256,40 +13164,88 @@ exports.isEmptyTask = isEmptyTask;
 
 /***/ }),
 
-/***/ 819:
+/***/ 818:
 /***/ (function(module) {
 
-module.exports = removeHook
+module.exports = require("tls");
 
-function removeHook (state, name, method) {
-  if (!state.registry[name]) {
-    return
-  }
+/***/ }),
 
-  var index = state.registry[name]
-    .map(function (registered) { return registered.orig })
-    .indexOf(method)
+/***/ 819:
+/***/ (function(__unusedmodule, exports) {
 
-  if (index === -1) {
-    return
-  }
+"use strict";
 
-  state.registry[name].splice(index, 1)
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.createDeferred = exports.deferred = void 0;
+/**
+ * Creates a new `DeferredPromise`
+ *
+ * ```typescript
+ import {deferred} from '@kwsites/promise-deferred`;
+ ```
+ */
+function deferred() {
+    let done;
+    let fail;
+    let status = 'pending';
+    const promise = new Promise((_done, _fail) => {
+        done = _done;
+        fail = _fail;
+    });
+    return {
+        promise,
+        done(result) {
+            if (status === 'pending') {
+                status = 'resolved';
+                done(result);
+            }
+        },
+        fail(error) {
+            if (status === 'pending') {
+                status = 'rejected';
+                fail(error);
+            }
+        },
+        get fulfilled() {
+            return status !== 'pending';
+        },
+        get status() {
+            return status;
+        },
+    };
 }
-
+exports.deferred = deferred;
+/**
+ * Alias of the exported `deferred` function, to help consumers wanting to use `deferred` as the
+ * local variable name rather than the factory import name, without needing to rename on import.
+ *
+ * ```typescript
+ import {createDeferred} from '@kwsites/promise-deferred`;
+ ```
+ */
+exports.createDeferred = deferred;
+/**
+ * Default export allows use as:
+ *
+ * ```typescript
+ import deferred from '@kwsites/promise-deferred`;
+ ```
+ */
+exports.default = deferred;
+//# sourceMappingURL=index.js.map
 
 /***/ }),
 
 /***/ 822:
 /***/ (function(__unusedmodule, __unusedexports, __webpack_require__) {
 
-const github = __webpack_require__(438);
 const core = __webpack_require__(186);
 const simpleGit = __webpack_require__(477);
 const path = __webpack_require__(622);
 const { mkdir } = __webpack_require__(747).promises;
 const { retry } = __webpack_require__(298);
-const { GitHub, getOctokitOptions } = __webpack_require__(30);
+const { GitHub, getOctokitOptions, sleep } = __webpack_require__(30);
 
 const { createBranch, clone, push } = __webpack_require__(374);
 const { getReposList, createPr } = __webpack_require__(119);
@@ -13348,6 +13304,7 @@ async function run() {
         await copyChangedFiles(modifiedFiles, dir);
         core.info('Pushing changes to remote');
         await push(gitHubKey, url, branchName, commitMessage, committerUsername, committerEmail, git);
+        await sleep(3000);
         core.info('Creating a pull request');
         const pullRequestUrl = await createPr(myOctokit, branchName, id, commitMessage, defaultBranch);
         core.endGroup();
@@ -13355,8 +13312,6 @@ async function run() {
       }
     }
   } catch (error) {
-    console.log('message', error.message);
-    console.log('data', error.data);
     core.setFailed(`Action failed because of: ${ error}`);
   }
 }
@@ -14370,7 +14325,7 @@ const core = __webpack_require__(186);
 
 const { getCommitFiles } = __webpack_require__(119);
 
-module.exports = { getListModifiedFiles, copyChangedFiles, parseCommaList };
+module.exports = { getListModifiedFiles, copyChangedFiles, parseCommaList, sleep };
 
 /**
  * @param  {Object} octokit GitHub API client instance
@@ -14423,6 +14378,11 @@ async function copyChangedFiles(filesList, destination) {
 function parseCommaList(list) {
   return list.split(',').map(i => i.trim().replace(/['"]+/g, ''));
 }
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 
 /***/ }),
 
@@ -15325,7 +15285,7 @@ const {checkIsRepoTask} = __webpack_require__(221);
 const {cloneTask, cloneMirrorTask} = __webpack_require__(173);
 const {addConfigTask, listConfigTask} = __webpack_require__(597);
 const {cleanWithOptionsTask, isCleanOptionsArray} = __webpack_require__(386);
-const {initTask} = __webpack_require__(765);
+const {initTask} = __webpack_require__(16);
 const {mergeTask} = __webpack_require__(829);
 const {moveTask} = __webpack_require__(520);
 const {pullTask} = __webpack_require__(636);
