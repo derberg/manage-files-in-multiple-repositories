@@ -1691,7 +1691,6 @@ module.exports = require("os");
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
 const core = __webpack_require__(186);
-const { sleep } = __webpack_require__(918);
 
 module.exports = { getCommitFiles, getReposList, createPr };
 
@@ -1781,17 +1780,21 @@ async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
     defaultBranch
   };
 
-  //try {
-  const { createPullRequest: { pullRequest: { url: pullRequestUrl } } } = await octokit.graphql(createPrMutation, newPrVariables);
-  return pullRequestUrl;
-  /*} catch (error) {
+  try {
+    const { createPullRequest: { pullRequest: { url: pullRequestUrl } } } = await octokit.graphql(createPrMutation, newPrVariables);
+    return pullRequestUrl;
+  } catch (error) {
     if (error.message === 'was submitted too quickly') {
       core.info('Waiting 5sec and retry PR creation as 1st attempt failed');
       await sleep(5000);
       const { createPullRequest: { pullRequest: { url: pullRequestUrl } } } = await octokit.graphql(createPrMutation, newPrVariables);
       return pullRequestUrl;
     }
-  }*/
+  }
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 }
 
 /***/ }),
@@ -14332,9 +14335,8 @@ const { copy } = __webpack_require__(630);
 const path = __webpack_require__(622);
 const core = __webpack_require__(186);
 const { getCommitFiles } = __webpack_require__(119);
-const cotusie = __webpack_require__(119);
 
-module.exports = { getListModifiedFiles, copyChangedFiles, parseCommaList, sleep };
+module.exports = { getListModifiedFiles, copyChangedFiles, parseCommaList };
 
 /**
  * @param  {Object} octokit GitHub API client instance
@@ -14346,8 +14348,6 @@ module.exports = { getListModifiedFiles, copyChangedFiles, parseCommaList, sleep
  * @returns {Array<String>} list of filepaths of modified files
  */
 async function getListModifiedFiles(octokit, commitId, owner, repo, filesToIgnore) {
-  console.log('cotusie', cotusie);
-  console.log('getCommitFiles', getCommitFiles);
   const commitFiles = await getCommitFiles(octokit, commitId, owner, repo);
   core.debug(`DEBUG: list of commits for ${commitId} that is used to check if there was any file located in .github/workflows modified`,  JSON.stringify(commitFiles, null, 2));
 
@@ -14388,10 +14388,6 @@ async function copyChangedFiles(filesList, destination) {
  */
 function parseCommaList(list) {
   return list.split(',').map(i => i.trim().replace(/['"]+/g, ''));
-}
-
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 
