@@ -13304,7 +13304,8 @@ async function run() {
         await copyChangedFiles(modifiedFiles, dir);
         core.info('Pushing changes to remote');
         await push(gitHubKey, url, branchName, commitMessage, committerUsername, committerEmail, git);
-        await sleep(3000);
+        core.info('Waiting 5sec before PR creation');
+        await sleep(5000);
         core.info('Creating a pull request');
         const pullRequestUrl = await createPr(myOctokit, branchName, id, commitMessage, defaultBranch);
         core.endGroup();
