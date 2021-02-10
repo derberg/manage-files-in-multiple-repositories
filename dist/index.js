@@ -13306,26 +13306,26 @@ async function run() {
     core.debug(`DEBUG: list of repositories for ${owner} that this action will iterate over:`);
     core.debug(JSON.stringify(reposList, null, 2));
 
-    for (const {url, name, id, defaultBranchRef: { name: defaultBranch }} of reposList) {
-      if (!ignoredRepositories.includes(name)) {
-        core.startGroup(`Started updating ${name} repo`);
-        const dir = path.join(process.cwd(), './clones', name);
+    for (const repo of reposList) {
+      if (!ignoredRepositories.includes(repo.name)) {
+        core.startGroup(`Started updating ${repo.name} repo`);
+        const dir = path.join(process.cwd(), './clones', repo.name);
         await mkdir(dir, {recursive: true});
 
         const branchName = `bot/update-global-workflow-${commitId}`;
         const git = simpleGit({baseDir: dir});
 
-        core.info(`Clonning ${name}.`);
-        await clone(url, dir, git);
+        core.info(`Clonning ${repo.name}.`);
+        await clone(repo.url, dir, git);
         core.info(`Creating branch ${branchName}.`);
         await createBranch(branchName, git);
         core.info('Copying files...');
         await copyChangedFiles(modifiedFiles, dir);
         core.info('Pushing changes to remote');
-        await push(gitHubKey, url, branchName, commitMessage, committerUsername, committerEmail, git);
-        const pullRequestUrl = await createPr(myOctokit, branchName, id, commitMessage, defaultBranch);
+        await push(gitHubKey, repo.url, branchName, commitMessage, committerUsername, committerEmail, git);
+        const pullRequestUrl = await createPr(myOctokit, branchName, repo.id, commitMessage, repo.defaultBranch);
         core.endGroup();
-        core.info(`Workflow finished with success and PR for ${name} is created -> ${pullRequestUrl}`);
+        core.info(`Workflow finished with success and PR for ${repo.name} is created -> ${pullRequestUrl}`);
       }
     }
   } catch (error) {
