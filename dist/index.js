@@ -7566,8 +7566,8 @@ async function areFilesChanged(git) {
   const diff = await git.diffSummary();
   core.debug('DEBUG: List of differences spotted in the repository');
   core.debug(JSON.stringify(diff, null, 2));
-  
-  return await diff.changed > 0;
+
+  return diff.changed > 0;
 }
   
 
@@ -13285,6 +13285,7 @@ const { getListOfFilesToReplicate, copyChangedFiles, parseCommaList, getBranchNa
 const triggerEventName = process.env.GITHUB_EVENT_NAME;
 const eventPayload = require(process.env.GITHUB_EVENT_PATH);
 
+/* eslint-disable sonarjs/cognitive-complexity */
 async function run() {
   if (triggerEventName !== 'push' && triggerEventName !== 'workflow_dispatch') return core.setFailed('This GitHub Action works only when triggered by "push" or "workflow_dispatch" webhooks.');
   
@@ -13351,7 +13352,7 @@ async function run() {
         core.info('Copying files...');
         await copyChangedFiles(filesToReplicate, dir);
         //pushing and creating PR only if there are changes detected locally
-        if (areFilesChanged(git)) {
+        if (await areFilesChanged(git)) {
           core.info('Pushing changes to remote');
           await push(gitHubKey, repo.url, branchName, commitMessage, committerUsername, committerEmail, git);
           const pullRequestUrl = await createPr(myOctokit, branchName, repo.id, commitMessage, repo.defaultBranchRef.name);
