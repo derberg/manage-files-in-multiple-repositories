@@ -13272,7 +13272,7 @@ const { getListModifiedFiles, copyChangedFiles, parseCommaList } = __webpack_req
 const eventPayload = require(process.env.GITHUB_EVENT_PATH);
 
 async function run() {
-  if (process.env.GITHUB_EVENT_NAME !== 'push') return core.setFailed('This GitHub Action works only when triggered by "push" webhook.');
+  if (process.env.GITHUB_EVENT_NAME !== 'push' && process.env.GITHUB_EVENT_NAME !== 'workflow_dispatch') return core.setFailed('This GitHub Action works only when triggered by "push" or "workflow_dispatch" webhook.');
 
   try {
     const gitHubKey = process.env.GITHUB_TOKEN || core.getInput('github_token', { required: true });
