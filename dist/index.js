@@ -1793,7 +1793,12 @@ async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
       retries = 0;
       return pullRequestUrl;
     } catch (error) {
-      if (error.message !== 'was submitted too quickly') retries = 0;
+      //if error is different than rate limit/timeout related we should throw error as it is very probable that 
+      //next PR will also fail anyway, we should let user know early in the process by failing the action
+      if (error.message !== 'was submitted too quickly') {
+        throw new Error(`Unable to create a PR: ${  error}`);
+      }
+      //we can only log error, we cannot throw error to not break the flow of the workflow
     }
   }
 
@@ -13288,6 +13293,8 @@ async function run() {
     const myOctokit = new octokit(getOctokitOptions(gitHubKey));
 
     //TODO for now this action is hardcoded to always get commit id of the first commit on the list
+    core.debug('DEBUG: full payload of the event that triggered the action:');
+    core.debug(JSON.stringify(eventPayload, null, 2));
     const commitId = eventPayload.commits[0].id;
     const ignoredRepositories = reposToIgnore ? parseCommaList(reposToIgnore) : [];
     //by default repo where workflow runs should always be ignored
@@ -13307,7 +13314,9 @@ async function run() {
     core.debug(JSON.stringify(reposList, null, 2));
 
     for (const repo of reposList) {
-      if (!ignoredRepositories.includes(repo.name)) {
+      //start only if repo not on list of ignored
+      //repo also must be initialized repo because only then it has default branch (defaultBranchRef) defined and PR can actually be created
+      if (!ignoredRepositories.includes(repo.name) && repo.defaultBranchRef) {
         core.startGroup(`Started updating ${repo.name} repo`);
         const dir = path.join(process.cwd(), './clones', repo.name);
         await mkdir(dir, {recursive: true});
@@ -13323,9 +13332,14 @@ async function run() {
         await copyChangedFiles(modifiedFiles, dir);
         core.info('Pushing changes to remote');
         await push(gitHubKey, repo.url, branchName, commitMessage, committerUsername, committerEmail, git);
-        const pullRequestUrl = await createPr(myOctokit, branchName, repo.id, commitMessage, repo.defaultBranch);
+        const pullRequestUrl = await createPr(myOctokit, branchName, repo.id, commitMessage, repo.defaultBranchRef.name);
         core.endGroup();
-        core.info(`Workflow finished with success and PR for ${repo.name} is created -> ${pullRequestUrl}`);
+
+        if (pullRequestUrl) {
+          core.info(`Workflow finished with success and PR for ${repo.name} is created -> ${pullRequestUrl}`);
+        } else {
+          core.info(`Unable to create a PR because of timeouts. Create PR manually from the branch ${  branchName} that was already created in the upstream`);
+        }
       }
     }
   } catch (error) {
