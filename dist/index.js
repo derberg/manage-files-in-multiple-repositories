@@ -13330,7 +13330,7 @@ async function run() {
         await copyChangedFiles(modifiedFiles, dir);
         core.info('Pushing changes to remote');
         await push(gitHubKey, repo.url, branchName, commitMessage, committerUsername, committerEmail, git);
-        const pullRequestUrl = await createPr(myOctokit, branchName, repo.id, commitMessage, repo.defaultBranchRef);
+        const pullRequestUrl = await createPr(myOctokit, branchName, repo.id, commitMessage, repo.defaultBranchRef.name);
         core.endGroup();
 
         if (pullRequestUrl) {
