@@ -1793,10 +1793,12 @@ async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
       retries = 0;
       return pullRequestUrl;
     } catch (error) {
-      //if error is different than rate limit/timeout related we can already stop by changing counter to 0
-      if (error.message !== 'was submitted too quickly') retries = 0;
-      //we throw error not only because of above but also when counter goes to 0 when all retires are done
-      if (retries = 0) throw new Error(`unable to submit PR: ${  error}`);
+      //if error is different than rate limit/timeout related we should throw error as it is very probable that 
+      //next PR will also fail anyway, we should let user know early in the process by failing the action
+      if (error.message !== 'was submitted too quickly') {
+        throw new Error(`Unable to create a PR: ${  error}`);
+      }
+      //we can only log error, we cannot throw error to not break the flow of the workflow
     }
   }
 
@@ -13330,7 +13332,12 @@ async function run() {
         await push(gitHubKey, repo.url, branchName, commitMessage, committerUsername, committerEmail, git);
         const pullRequestUrl = await createPr(myOctokit, branchName, repo.id, commitMessage, repo.defaultBranchRef);
         core.endGroup();
-        core.info(`Workflow finished with success and PR for ${repo.name} is created -> ${pullRequestUrl}`);
+
+        if (pullRequestUrl) {
+          core.info(`Workflow finished with success and PR for ${repo.name} is created -> ${pullRequestUrl}`);
+        } else {
+          core.info(`Unable to create a PR because of timeouts. Create PR manually from the branch ${  branchName} that was already created in the upstream`);
+        }
       }
     }
   } catch (error) {
