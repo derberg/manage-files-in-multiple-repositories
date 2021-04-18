@@ -1794,7 +1794,7 @@ async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
       return pullRequestUrl;
     } catch (error) {
       if (error.message !== 'was submitted too quickly') return retries = 0;
-      core.debug(`Unable to submit PR: ${error}`);
+      core.info(`Unable to submit PR: ${error}`);
     }
   }
 
@@ -13289,6 +13289,8 @@ async function run() {
     const myOctokit = new octokit(getOctokitOptions(gitHubKey));
 
     //TODO for now this action is hardcoded to always get commit id of the first commit on the list
+    core.debug('DEBUG: full payload of the event that triggered the action:');
+    core.debug(JSON.stringify(eventPayload, null, 2));
     const commitId = eventPayload.commits[0].id;
     const ignoredRepositories = reposToIgnore ? parseCommaList(reposToIgnore) : [];
     //by default repo where workflow runs should always be ignored
