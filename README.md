@@ -23,6 +23,12 @@ It seems like GitHub is [not going](https://github.community/t/plans-to-support-
 
 Maybe GitHub will support global workflows someday. Take it into account and put global workflows in a repository called `.github` because once GitHub starts supporting global workflows, they will surely have to be located there. Read more about `.github` repository [here](https://docs.github.com/en/free-pro-team@latest/github/building-a-strong-community/creating-a-default-community-health-file).
 
+## Supported Event Triggers
+
+This action can be triggered by:
+- **push** event and only files that were changed in the commit are replicated to other repositories.
+- **workflow_dispatch** event and then all files from workflow directory (except of ignored ones) are replicated to other repositories. Use case for this event is when you create new repositories in your organization that need to get global workflows. Then you can manually trigger the action and all global workflows will be updated in all repositories.
+
 ## Action Flow
 
  <img src="diagram.png" alt="flow diagram" width="40%"> 
@@ -48,6 +54,7 @@ name: Global workflow to rule them all
 on:
   push:
     branches: [ master ] #or main
+  workflow_dispatch: {} #to enable manual triggering of the action
 
 jobs:
 
@@ -146,8 +153,7 @@ GITHUB_TOKEN=token GITHUB_EVENT_PATH="../test/fake-event.json" GITHUB_REPOSITORY
 ## Known Limitations/Hardcodes
 
 * Action looks for file changes only in `.github/workflows` because it intends to support only global workflows and not any files. This is, of course something that can be changed. Please create an issue to discuss this change further.
-* Action is limited to support only **push** event because only this event contains information about commits that were pushed to the repository.
-* Action assumes that **push** event has information only about one commit. It is very common for many projects and organizations to merge only of single commit or merging and squashing commits into one. If you see a need to support multiple commits on a **push** event, please open an issue and describe your use case and expected behavior.
+* Action assumes that when triggered by **push** event, it has information only about one commit. It is very common for many projects and organizations to merge only of single commit or merging and squashing commits into one. If you see a need to support multiple commits on a **push** event, please open an issue and describe your use case and expected behavior.
 * Action requires you to provide `files_to_ignore` as you need to remember to put there the name of the workflow file where you use this action. Yes, you need to manually provide the file's name as I [did not find](https://github.community/t/how-can-i-get-the-name-of-the-workflow-file-of-the-workflow-that-was-triggered/145216) a nice way how, in the workflow, I can access information about the name of the workflow file. The only idea I have, which is not the best and requires some additional effort, is to read `GITHUB_WORKFLOW` variable and then read the workflow files' contents to match the name. I hope you have something better.
 * Action is limited to support users and organizations with 100 or less repositories. Why? I just did not implement pagination handling. Why? I think that larger organizations is just a rare case, but I'm happy to support them if you need. Just drop me an issue.
 

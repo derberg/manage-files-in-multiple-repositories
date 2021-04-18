@@ -1798,7 +1798,6 @@ async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
       if (error.message !== 'was submitted too quickly') {
         throw new Error(`Unable to create a PR: ${  error}`);
       }
-      //we can only log error, we cannot throw error to not break the flow of the workflow
     }
   }
 
@@ -7534,7 +7533,7 @@ exports.parseStringResponse = parseStringResponse;
 
 const core = __webpack_require__(186);
 
-module.exports = {createBranch, clone, push};
+module.exports = {createBranch, clone, push, areFilesChanged};
 
 async function createBranch(branchName, git) {
   return await git
@@ -7560,6 +7559,11 @@ async function push(token, url, branchName, message, committerUsername, committe
   await git.commit(message);
   await git.addRemote('auth', authanticatedUrl(token, url, committerUsername));
   await git.push(['-u', 'auth', branchName]);
+}
+
+async function areFilesChanged(git) {
+  const diff = await git.diffSummary();
+  return await diff.changed > 0;
 }
   
 
@@ -13270,7 +13274,7 @@ const { mkdir } = __webpack_require__(747).promises;
 const { retry } = __webpack_require__(298);
 const { GitHub, getOctokitOptions } = __webpack_require__(30);
 
-const { createBranch, clone, push } = __webpack_require__(374);
+const { createBranch, clone, push, areFilesChanged } = __webpack_require__(374);
 const { getReposList, createPr } = __webpack_require__(119);
 const { getListOfFilesToReplicate, copyChangedFiles, parseCommaList, getBranchName } = __webpack_require__(918);
 
@@ -13328,7 +13332,7 @@ async function run() {
     for (const repo of reposList) {
       //start only if repo not on list of ignored
       //repo also must be initialized repo because only then it has default branch (defaultBranchRef) defined and PR can actually be created
-      if (!ignoredRepositories.includes(repo.name) && repo.defaultBranchRef) {
+      if (!ignoredRepositories.includes(repo.name) && repo.defaultBranchRef) {        
         core.startGroup(`Started updating ${repo.name} repo`);
         const dir = path.join(process.cwd(), './clones', repo.name);
         await mkdir(dir, {recursive: true});
@@ -13342,15 +13346,20 @@ async function run() {
         await createBranch(branchName, git);
         core.info('Copying files...');
         await copyChangedFiles(filesToReplicate, dir);
-        core.info('Pushing changes to remote');
-        await push(gitHubKey, repo.url, branchName, commitMessage, committerUsername, committerEmail, git);
-        const pullRequestUrl = await createPr(myOctokit, branchName, repo.id, commitMessage, repo.defaultBranchRef.name);
-        core.endGroup();
+        //pushing and creating PR only if there are changes detected locally
+        if (areFilesChanged(git)) {
+          core.info('Pushing changes to remote');
+          await push(gitHubKey, repo.url, branchName, commitMessage, committerUsername, committerEmail, git);
+          const pullRequestUrl = await createPr(myOctokit, branchName, repo.id, commitMessage, repo.defaultBranchRef.name);
+          core.endGroup();
 
-        if (pullRequestUrl) {
-          core.info(`Workflow finished with success and PR for ${repo.name} is created -> ${pullRequestUrl}`);
+          if (pullRequestUrl) {
+            core.info(`Workflow finished with success and PR for ${repo.name} is created -> ${pullRequestUrl}`);
+          } else {
+            core.info(`Unable to create a PR because of timeouts. Create PR manually from the branch ${  branchName} that was already created in the upstream`);
+          }
         } else {
-          core.info(`Unable to create a PR because of timeouts. Create PR manually from the branch ${  branchName} that was already created in the upstream`);
+          core.info('Workflow finished with success and no PR was created as no changes were detected');
         }
       }
     }
