@@ -14385,7 +14385,7 @@ async function getListOfFilesToReplicate(octokit, commitId, owner, repo, filesTo
   if (triggerEventName === 'push') {
     const commitFiles = await getCommitFiles(octokit, commitId, owner, repo);
     filesToCheckForReplication = commitFiles.map((el) => el.filename);
-    core.debug(`DEBUG: list of commited files for commit ${commitId} that is used to check if there was any file located in .github/workflows modified`, filesToCheckForReplication);
+    core.debug(`DEBUG: list of commited files for commit ${commitId} that is used to check if there was any file located in .github/workflows modified: ${filesToCheckForReplication}`);
   }
 
   if (triggerEventName === 'workflow_dispatch') {
@@ -14399,7 +14399,7 @@ async function getListOfFilesToReplicate(octokit, commitId, owner, repo, filesTo
   
   core.info(`List of files that should be ignored: ${ignoreFilesList}`);
 
-  for (const { filename } of filesToCheckForReplication) {
+  for (const filename of filesToCheckForReplication) {
     const onlyFileName = filename.split('/').slice(-1)[0];
     const isFileIgnored = !!ignoreFilesList.map(file => file === onlyFileName).filter(Boolean).length;
     //TODO for now this action is hardcoded to only monitor changes in this directory because it is supposed to support global workflows and no other files
