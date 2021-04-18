@@ -1793,7 +1793,7 @@ async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
       retries = 0;
       return pullRequestUrl;
     } catch (error) {
-      if (error.message !== 'was submitted too quickly') return retries = 0;
+      if (error.message !== 'was submitted too quickly') retries = 0;
       core.info(`Unable to submit PR: ${error}`);
     }
   }
