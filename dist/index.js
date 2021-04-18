@@ -1751,7 +1751,8 @@ async function getReposList(octokit, owner) {
   } catch (error) {
     const org = error.data.user;
     const user = error.data.organization;
-    core.debug('DEBUG: Full response from graphql with list of repositories for org or user. There will always be an error for one node, user or organization, because we are always asking for both. Look into code to understan why', JSON.stringify(error.data, null, 2));
+    core.debug('DEBUG: Full response from graphql with list of repositories for org or user. There will always be an error for one node, user or organization, because we are always asking for both. Look into code to understan why:');
+    core.debug(JSON.stringify(error.data, null, 2));
 
     return org ? org.repositories.nodes : user.repositories.nodes;
   }
@@ -7563,6 +7564,9 @@ async function push(token, url, branchName, message, committerUsername, committe
 
 async function areFilesChanged(git) {
   const diff = await git.diffSummary();
+  core.debug('DEBUG: List of differences spotted in the repository');
+  core.debug(JSON.stringify(diff, null, 2));
+  
   return await diff.changed > 0;
 }
   
