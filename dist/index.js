@@ -13272,12 +13272,16 @@ const { GitHub, getOctokitOptions } = __webpack_require__(30);
 
 const { createBranch, clone, push } = __webpack_require__(374);
 const { getReposList, createPr } = __webpack_require__(119);
-const { getListModifiedFiles, copyChangedFiles, parseCommaList } = __webpack_require__(918);
+const { getListOfFilesToReplicate, copyChangedFiles, parseCommaList, getBranchName } = __webpack_require__(918);
 
+const triggerEventName = process.env.GITHUB_EVENT_NAME;
 const eventPayload = require(process.env.GITHUB_EVENT_PATH);
 
 async function run() {
-  if (process.env.GITHUB_EVENT_NAME !== 'push') return core.setFailed('This GitHub Action works only when triggered by "push" webhook.');
+  if (triggerEventName !== 'push' && triggerEventName !== 'workflow_dispatch') return core.setFailed('This GitHub Action works only when triggered by "push" or "workflow_dispatch" webhooks.');
+  
+  core.debug('DEBUG: full payload of the event that triggered the action:');
+  core.debug(JSON.stringify(eventPayload, null, 2));
 
   try {
     const gitHubKey = process.env.GITHUB_TOKEN || core.getInput('github_token', { required: true });
@@ -13292,22 +13296,29 @@ async function run() {
     const octokit = GitHub.plugin(retry);
     const myOctokit = new octokit(getOctokitOptions(gitHubKey));
 
-    //TODO for now this action is hardcoded to always get commit id of the first commit on the list
-    core.debug('DEBUG: full payload of the event that triggered the action:');
-    core.debug(JSON.stringify(eventPayload, null, 2));
-    const commitId = eventPayload.commits[0].id;
+    /*
+     * Getting list of repos that should be ignored
+     */
     const ignoredRepositories = reposToIgnore ? parseCommaList(reposToIgnore) : [];
     //by default repo where workflow runs should always be ignored
     ignoredRepositories.push(repo);
 
-    core.startGroup(`Getting list of modified workflow files from ${commitId} located in ${owner}/${repo}.`);
-    const modifiedFiles = await getListModifiedFiles(myOctokit, commitId, owner, repo, filesToIgnore);
+    /*
+     * Getting list of files that must be replicated in other repos by this action
+     */
+    //TODO for now this action is hardcoded to always get commit id of the first commit on the list
+    //Id of commit can be taken only from push event, not workflow_dispatch
+    const commitId = triggerEventName === 'push' ? eventPayload.commits[0].id : '';
 
-    if (!modifiedFiles.length) 
+    core.startGroup('Getting list of workflow files that need to be replicated in other repositories');
+    const filesToReplicate = await getListOfFilesToReplicate(myOctokit, commitId, owner, repo, filesToIgnore, triggerEventName);
+
+    if (!filesToReplicate.length) 
       return core.info('No changes to workflows were detected.');
     
-    core.info(`Modified files that need replication are: ${modifiedFiles}.`);
+    core.info(`Files that need replication are: ${filesToReplicate}.`);
     core.endGroup();
+
     core.info(`Getting list of repositories owned by ${owner} that will get updates. The following repos will be later ignored: ${ignoredRepositories}`);
     const reposList = await getReposList(myOctokit, owner);
     core.debug(`DEBUG: list of repositories for ${owner} that this action will iterate over:`);
@@ -13321,7 +13332,7 @@ async function run() {
         const dir = path.join(process.cwd(), './clones', repo.name);
         await mkdir(dir, {recursive: true});
 
-        const branchName = `bot/update-global-workflow-${commitId}`;
+        const branchName = getBranchName(commitId);
         const git = simpleGit({baseDir: dir});
 
         core.info(`Clonning ${repo.name}.`);
@@ -13329,7 +13340,7 @@ async function run() {
         core.info(`Creating branch ${branchName}.`);
         await createBranch(branchName, git);
         core.info('Copying files...');
-        await copyChangedFiles(modifiedFiles, dir);
+        await copyChangedFiles(filesToReplicate, dir);
         core.info('Pushing changes to remote');
         await push(gitHubKey, repo.url, branchName, commitMessage, committerUsername, committerEmail, git);
         const pullRequestUrl = await createPr(myOctokit, branchName, repo.id, commitMessage, repo.defaultBranchRef.name);
@@ -14351,31 +14362,43 @@ module.exports = {
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
 const { copy } = __webpack_require__(630);
+const { readdir } = __webpack_require__(747).promises;
 const path = __webpack_require__(622);
 const core = __webpack_require__(186);
 const { getCommitFiles } = __webpack_require__(119);
 
-module.exports = { getListModifiedFiles, copyChangedFiles, parseCommaList };
+module.exports = { copyChangedFiles, parseCommaList, getBranchName, getListOfFilesToReplicate };
 
 /**
  * @param  {Object} octokit GitHub API client instance
- * @param  {Object} eventPayload https://developer.github.com/webhooks/event-payloads/#push
+ * @param  {Object} commitId Id of the commit to check for files changes
  * @param  {String} owner org or user name
  * @param  {String} repo repo name
  * @param  {String} filesToIgnore comma-separated list of files that should be ignored
+ * @param  {String} triggerEventName name of the event that triggered the workflow
  * 
  * @returns {Array<String>} list of filepaths of modified files
  */
-async function getListModifiedFiles(octokit, commitId, owner, repo, filesToIgnore) {
-  const commitFiles = await getCommitFiles(octokit, commitId, owner, repo);
-  core.debug(`DEBUG: list of commits for ${commitId} that is used to check if there was any file located in .github/workflows modified`,  JSON.stringify(commitFiles, null, 2));
+async function getListOfFilesToReplicate(octokit, commitId, owner, repo, filesToIgnore, triggerEventName) {
+  let filesToCheckForReplication;
+  
+  if (triggerEventName === 'push') {
+    filesToCheckForReplication = await getCommitFiles(octokit, commitId, owner, repo);
+    core.debug(`DEBUG: list of commited files for commit ${commitId} that is used to check if there was any file located in .github/workflows modified`, filesToCheckForReplication);
+  }
+
+  if (triggerEventName === 'push') {
+    const workflowDir = process.cwd();
+    filesToCheckForReplication = await readdir(workflowDir);
+    core.debug(`DEBUG: list of files from ${workflowDir} directory is ${filesToCheckForReplication}`);
+  }
 
   const changedFiles = [];
   const ignoreFilesList = filesToIgnore ? parseCommaList(filesToIgnore) : [];
   
   core.info(`List of files that should be ignored: ${ignoreFilesList}`);
 
-  for (const { filename } of commitFiles) {
+  for (const { filename } of filesToCheckForReplication) {
     const onlyFileName = filename.split('/').slice(-1)[0];
     const isFileIgnored = !!ignoreFilesList.map(file => file === onlyFileName).filter(Boolean).length;
     //TODO for now this action is hardcoded to only monitor changes in this directory because it is supposed to support global workflows and no other files
@@ -14409,6 +14432,16 @@ function parseCommaList(list) {
   return list.split(',').map(i => i.trim().replace(/['"]+/g, ''));
 }
 
+/**
+ * Create a branch name. 
+ * If commitId is not provided then it means action was not triggered by push and name must have some generated number and indicate manual run
+ * 
+ * @param  {String} commitId id of commit that should be added to branch name for better debugging of changes
+ * @returns  {String}
+ */
+function getBranchName(commitId) {
+  return commitId ? `bot/update-global-workflow-${commitId}` : `bot/manual-update-global-workflow-${Math.random().toString(36).substring(7)}`;
+}
 
 /***/ }),
 
