@@ -14393,7 +14393,7 @@ async function getListOfFilesToReplicate(octokit, commitId, owner, repo, filesTo
   if (triggerEventName === 'workflow_dispatch') {
     const workflowDirPath = path.join(process.cwd(), defaultWorkflowsDir);
     const workflowDirFilesList = await readdir(workflowDirPath);
-    filesToCheckForReplication = workflowDirFilesList.map(filename => path.join(workflowDirPath, filename));
+    filesToCheckForReplication = workflowDirFilesList.map(filename => path.join(defaultWorkflowsDir, filename));
     core.debug(`DEBUG: list of files from ${workflowDirPath} directory is ${filesToCheckForReplication}`);
   }
 
