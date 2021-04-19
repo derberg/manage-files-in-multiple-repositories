@@ -7567,7 +7567,7 @@ async function areFilesChanged(git) {
   core.debug('DEBUG: List of differences spotted in the repository');
   core.debug(JSON.stringify(status, null, 2));
 
-  return status.staged.length > 0;
+  return status.files.length > 0;
 }
   
 
