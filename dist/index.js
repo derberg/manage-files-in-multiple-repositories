@@ -7554,7 +7554,6 @@ async function push(token, url, branchName, message, committerUsername, committe
 
   if (core.isDebug()) __webpack_require__(231).enable('simple-git');
 
-  await git.add('./*');
   await git.addConfig('user.name', committerUsername);
   await git.addConfig('user.email', committerEmail);
   await git.commit(message);
@@ -7563,11 +7562,12 @@ async function push(token, url, branchName, message, committerUsername, committe
 }
 
 async function areFilesChanged(git) {
-  const diff = await git.diffSummary();
+  await git.add('./*');
+  const status = await git.status();
   core.debug('DEBUG: List of differences spotted in the repository');
-  core.debug(JSON.stringify(diff, null, 2));
+  core.debug(JSON.stringify(status, null, 2));
 
-  return diff.changed > 0;
+  return status.staged.length > 0;
 }
   
 
@@ -13349,7 +13349,7 @@ async function run() {
         await clone(repo.url, dir, git);
         core.info(`Creating branch ${branchName}.`);
         await createBranch(branchName, git);
-        core.info('Copying files...');
+        core.info('Copying files');
         await copyChangedFiles(filesToReplicate, dir);
         //pushing and creating PR only if there are changes detected locally
         if (await areFilesChanged(git)) {
