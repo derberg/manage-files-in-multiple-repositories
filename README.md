@@ -6,6 +6,7 @@ GitHub Action that introduces support for global workflows. Global workflows are
 <!-- toc -->
 
 - [Why I Created This Action?](#why-i-created-this-action)
+- [Supported Event Triggers](#supported-event-triggers)
 - [Action Flow](#action-flow)
 - [Configuration](#configuration)
 - [Examples](#examples)
@@ -27,7 +28,9 @@ Maybe GitHub will support global workflows someday. Take it into account and put
 
 This action can be triggered by:
 - **push** event and only files that were changed in the commit are replicated to other repositories.
-- **workflow_dispatch** event and then all files from workflow directory (except of ignored ones) are replicated to other repositories. Use case for this event is when you create new repositories in your organization that need to get global workflows. Then you can manually trigger the action and all global workflows will be updated in all repositories.
+- **workflow_dispatch** event and then all files from workflow directory (except of ignored ones) are replicated to other repositories. Use case for this event is when you create new repositories in your organization that need to get global workflows. Then you can manually trigger the action and all global workflows will be updated in all repositories. Below screen shots shows how manual triggering works.
+
+  <img src="workflow_dispatch.jpg" alt="flow diagram" width="40%">
 
 ## Action Flow
 
