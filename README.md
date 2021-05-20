@@ -150,7 +150,8 @@ jobs:
 # GITHUB_TOKEN provide personal GitHub token with scope to push to repos
 # GITHUB_REPOSITORY provide name of org/user and the repo in which this workflow is suppose to run
 # GITHUB_EVENT_PATH is a path to local file with dummy event payload for testing
-GITHUB_TOKEN=token GITHUB_EVENT_PATH="../test/fake-event.json" GITHUB_REPOSITORY="lukasz-lab/.github" npm start
+# GITHUB_EVENT_NAME is the name of the event that triggers the event
+GITHUB_TOKEN=token GITHUB_EVENT_NAME=push GITHUB_EVENT_PATH="../test/fake-event.json" GITHUB_REPOSITORY="lukasz-lab/.github" npm start
 ```
 
 ## Known Limitations/Hardcodes
@@ -158,7 +159,6 @@ GITHUB_TOKEN=token GITHUB_EVENT_PATH="../test/fake-event.json" GITHUB_REPOSITORY
 * Action looks for file changes only in `.github/workflows` because it intends to support only global workflows and not any files. This is, of course something that can be changed. Please create an issue to discuss this change further.
 * Action assumes that when triggered by **push** event, it has information only about one commit. It is very common for many projects and organizations to merge only of single commit or merging and squashing commits into one. If you see a need to support multiple commits on a **push** event, please open an issue and describe your use case and expected behavior.
 * Action requires you to provide `files_to_ignore` as you need to remember to put there the name of the workflow file where you use this action. Yes, you need to manually provide the file's name as I [did not find](https://github.community/t/how-can-i-get-the-name-of-the-workflow-file-of-the-workflow-that-was-triggered/145216) a nice way how, in the workflow, I can access information about the name of the workflow file. The only idea I have, which is not the best and requires some additional effort, is to read `GITHUB_WORKFLOW` variable and then read the workflow files' contents to match the name. I hope you have something better.
-* Action is limited to support users and organizations with 100 or less repositories. Why? I just did not implement pagination handling. Why? I think that larger organizations is just a rare case, but I'm happy to support them if you need. Just drop me an issue.
 
 ## Debug
 

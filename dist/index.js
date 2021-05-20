@@ -1705,57 +1705,56 @@ async function getCommitFiles(octokit, commitId, owner, repo) {
 }
 
 async function getReposList(octokit, owner) {
-  const reposListQuery = `
-    query getReposList($owner: String!){
-        user(login: $owner) {
-            repositories(first: 100) {
-                nodes {
-                    ... on Repository {
-                        name
-                        url
-                        id
-                        defaultBranchRef {
-                            name
-                        }
-                    }
-                }
-            }
-        }
-        organization(login: $owner) {
-            repositories(first: 100) {
-                nodes {
-                    ... on Repository {
-                        name
-                        url
-                        id
-                        defaultBranchRef {
-                            name
-                        }
-                    }
-                }
-            }
-        }
-    }  
-  `;
+  let isUser;
+  let response;
 
-  const reposListVariables = {
-    owner
-  };
-  
   /*
-    Handling it in such a strange way to always return from catch as I could not find
-    a better way of getting repos list either from users or organizations
+  * Checking if action runs for organization or user as then to list repost there are different api calls
   */
   try {
-    await octokit.graphql(reposListQuery, reposListVariables);
-  } catch (error) {
-    const org = error.data.user;
-    const user = error.data.organization;
-    core.debug('DEBUG: Full response from graphql with list of repositories for org or user. There will always be an error for one node, user or organization, because we are always asking for both. Look into code to understan why:');
-    core.debug(JSON.stringify(error.data, null, 2));
+    await octokit.orgs.get({
+      org: owner,
+    });
 
-    return org ? org.repositories.nodes : user.repositories.nodes;
+    isUser = false;
+  } catch (error) {
+    if (error.status === 404) {
+      try {
+        await octokit.users.getByUsername({
+          username: owner,
+        });
+        isUser = true;
+      } catch (error) {
+        throw new Error(`Invalid user/org: ${  error}`);
+      }
+    } else {
+      throw new Error(`Failed checking if workflow runs for org or user: ${  error}`);
+    }
   }
+
+  /*
+  * Getting list of repos
+  */
+  if (isUser) {
+    response = await octokit.paginate(octokit.repos.listForUser, {
+      username: owner,
+      per_page: 100
+    });
+  } else {
+    response = await octokit.paginate(octokit.repos.listForOrg, {
+      org: owner,
+      per_page: 100
+    });
+  }
+  
+  return response.map((repo) => {
+    return { 
+      name: repo.name,
+      url: repo.html_url,
+      id: repo.node_id,
+      defaultBranch: repo.default_branch
+    };
+  });
 }
 
 async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
@@ -4371,7 +4370,7 @@ exports.getState = getState;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-const VERSION = "2.3.0";
+const VERSION = "2.13.3";
 
 /**
  * Some “list” response that can be paginated have a different response structure
@@ -4424,26 +4423,23 @@ function iterator(octokit, route, parameters) {
   let url = options.url;
   return {
     [Symbol.asyncIterator]: () => ({
-      next() {
-        if (!url) {
-          return Promise.resolve({
-            done: true
-          });
-        }
-
-        return requestMethod({
+      async next() {
+        if (!url) return {
+          done: true
+        };
+        const response = await requestMethod({
           method,
           url,
           headers
-        }).then(normalizePaginatedListResponse).then(response => {
-          // `response.headers.link` format:
-          // '<https://api.github.com/users/aseemk/followers?page=2>; rel="next", <https://api.github.com/users/aseemk/followers?page=2>; rel="last"'
-          // sets `url` to undefined if "next" URL is not present or `link` header is not set
-          url = ((response.headers.link || "").match(/<([^>]+)>;\s*rel="next"/) || [])[1];
-          return {
-            value: response
-          };
         });
+        const normalizedResponse = normalizePaginatedListResponse(response); // `response.headers.link` format:
+        // '<https://api.github.com/users/aseemk/followers?page=2>; rel="next", <https://api.github.com/users/aseemk/followers?page=2>; rel="last"'
+        // sets `url` to undefined if "next" URL is not present or `link` header is not set
+
+        url = ((normalizedResponse.headers.link || "").match(/<([^>]+)>;\s*rel="next"/) || [])[1];
+        return {
+          value: normalizedResponse
+        };
       }
 
     })
@@ -4481,6 +4477,20 @@ function gather(octokit, results, iterator, mapFn) {
   });
 }
 
+const composePaginateRest = Object.assign(paginate, {
+  iterator
+});
+
+const paginatingEndpoints = ["GET /app/installations", "GET /applications/grants", "GET /authorizations", "GET /enterprises/{enterprise}/actions/permissions/organizations", "GET /enterprises/{enterprise}/actions/runner-groups", "GET /enterprises/{enterprise}/actions/runner-groups/{runner_group_id}/organizations", "GET /enterprises/{enterprise}/actions/runner-groups/{runner_group_id}/runners", "GET /enterprises/{enterprise}/actions/runners", "GET /enterprises/{enterprise}/actions/runners/downloads", "GET /events", "GET /gists", "GET /gists/public", "GET /gists/starred", "GET /gists/{gist_id}/comments", "GET /gists/{gist_id}/commits", "GET /gists/{gist_id}/forks", "GET /installation/repositories", "GET /issues", "GET /marketplace_listing/plans", "GET /marketplace_listing/plans/{plan_id}/accounts", "GET /marketplace_listing/stubbed/plans", "GET /marketplace_listing/stubbed/plans/{plan_id}/accounts", "GET /networks/{owner}/{repo}/events", "GET /notifications", "GET /organizations", "GET /orgs/{org}/actions/permissions/repositories", "GET /orgs/{org}/actions/runner-groups", "GET /orgs/{org}/actions/runner-groups/{runner_group_id}/repositories", "GET /orgs/{org}/actions/runner-groups/{runner_group_id}/runners", "GET /orgs/{org}/actions/runners", "GET /orgs/{org}/actions/runners/downloads", "GET /orgs/{org}/actions/secrets", "GET /orgs/{org}/actions/secrets/{secret_name}/repositories", "GET /orgs/{org}/blocks", "GET /orgs/{org}/credential-authorizations", "GET /orgs/{org}/events", "GET /orgs/{org}/failed_invitations", "GET /orgs/{org}/hooks", "GET /orgs/{org}/installations", "GET /orgs/{org}/invitations", "GET /orgs/{org}/invitations/{invitation_id}/teams", "GET /orgs/{org}/issues", "GET /orgs/{org}/members", "GET /orgs/{org}/migrations", "GET /orgs/{org}/migrations/{migration_id}/repositories", "GET /orgs/{org}/outside_collaborators", "GET /orgs/{org}/projects", "GET /orgs/{org}/public_members", "GET /orgs/{org}/repos", "GET /orgs/{org}/team-sync/groups", "GET /orgs/{org}/teams", "GET /orgs/{org}/teams/{team_slug}/discussions", "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments", "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}/reactions", "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/reactions", "GET /orgs/{org}/teams/{team_slug}/invitations", "GET /orgs/{org}/teams/{team_slug}/members", "GET /orgs/{org}/teams/{team_slug}/projects", "GET /orgs/{org}/teams/{team_slug}/repos", "GET /orgs/{org}/teams/{team_slug}/team-sync/group-mappings", "GET /orgs/{org}/teams/{team_slug}/teams", "GET /projects/columns/{column_id}/cards", "GET /projects/{project_id}/collaborators", "GET /projects/{project_id}/columns", "GET /repos/{owner}/{repo}/actions/artifacts", "GET /repos/{owner}/{repo}/actions/runners", "GET /repos/{owner}/{repo}/actions/runners/downloads", "GET /repos/{owner}/{repo}/actions/runs", "GET /repos/{owner}/{repo}/actions/runs/{run_id}/artifacts", "GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs", "GET /repos/{owner}/{repo}/actions/secrets", "GET /repos/{owner}/{repo}/actions/workflows", "GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs", "GET /repos/{owner}/{repo}/assignees", "GET /repos/{owner}/{repo}/branches", "GET /repos/{owner}/{repo}/check-runs/{check_run_id}/annotations", "GET /repos/{owner}/{repo}/check-suites/{check_suite_id}/check-runs", "GET /repos/{owner}/{repo}/code-scanning/alerts", "GET /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}/instances", "GET /repos/{owner}/{repo}/code-scanning/analyses", "GET /repos/{owner}/{repo}/collaborators", "GET /repos/{owner}/{repo}/comments", "GET /repos/{owner}/{repo}/comments/{comment_id}/reactions", "GET /repos/{owner}/{repo}/commits", "GET /repos/{owner}/{repo}/commits/{commit_sha}/branches-where-head", "GET /repos/{owner}/{repo}/commits/{commit_sha}/comments", "GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls", "GET /repos/{owner}/{repo}/commits/{ref}/check-runs", "GET /repos/{owner}/{repo}/commits/{ref}/check-suites", "GET /repos/{owner}/{repo}/commits/{ref}/statuses", "GET /repos/{owner}/{repo}/contributors", "GET /repos/{owner}/{repo}/deployments", "GET /repos/{owner}/{repo}/deployments/{deployment_id}/statuses", "GET /repos/{owner}/{repo}/events", "GET /repos/{owner}/{repo}/forks", "GET /repos/{owner}/{repo}/git/matching-refs/{ref}", "GET /repos/{owner}/{repo}/hooks", "GET /repos/{owner}/{repo}/invitations", "GET /repos/{owner}/{repo}/issues", "GET /repos/{owner}/{repo}/issues/comments", "GET /repos/{owner}/{repo}/issues/comments/{comment_id}/reactions", "GET /repos/{owner}/{repo}/issues/events", "GET /repos/{owner}/{repo}/issues/{issue_number}/comments", "GET /repos/{owner}/{repo}/issues/{issue_number}/events", "GET /repos/{owner}/{repo}/issues/{issue_number}/labels", "GET /repos/{owner}/{repo}/issues/{issue_number}/reactions", "GET /repos/{owner}/{repo}/issues/{issue_number}/timeline", "GET /repos/{owner}/{repo}/keys", "GET /repos/{owner}/{repo}/labels", "GET /repos/{owner}/{repo}/milestones", "GET /repos/{owner}/{repo}/milestones/{milestone_number}/labels", "GET /repos/{owner}/{repo}/notifications", "GET /repos/{owner}/{repo}/pages/builds", "GET /repos/{owner}/{repo}/projects", "GET /repos/{owner}/{repo}/pulls", "GET /repos/{owner}/{repo}/pulls/comments", "GET /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions", "GET /repos/{owner}/{repo}/pulls/{pull_number}/comments", "GET /repos/{owner}/{repo}/pulls/{pull_number}/commits", "GET /repos/{owner}/{repo}/pulls/{pull_number}/files", "GET /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers", "GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews", "GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/comments", "GET /repos/{owner}/{repo}/releases", "GET /repos/{owner}/{repo}/releases/{release_id}/assets", "GET /repos/{owner}/{repo}/secret-scanning/alerts", "GET /repos/{owner}/{repo}/stargazers", "GET /repos/{owner}/{repo}/subscribers", "GET /repos/{owner}/{repo}/tags", "GET /repos/{owner}/{repo}/teams", "GET /repositories", "GET /repositories/{repository_id}/environments/{environment_name}/secrets", "GET /scim/v2/enterprises/{enterprise}/Groups", "GET /scim/v2/enterprises/{enterprise}/Users", "GET /scim/v2/organizations/{org}/Users", "GET /search/code", "GET /search/commits", "GET /search/issues", "GET /search/labels", "GET /search/repositories", "GET /search/topics", "GET /search/users", "GET /teams/{team_id}/discussions", "GET /teams/{team_id}/discussions/{discussion_number}/comments", "GET /teams/{team_id}/discussions/{discussion_number}/comments/{comment_number}/reactions", "GET /teams/{team_id}/discussions/{discussion_number}/reactions", "GET /teams/{team_id}/invitations", "GET /teams/{team_id}/members", "GET /teams/{team_id}/projects", "GET /teams/{team_id}/repos", "GET /teams/{team_id}/team-sync/group-mappings", "GET /teams/{team_id}/teams", "GET /user/blocks", "GET /user/emails", "GET /user/followers", "GET /user/following", "GET /user/gpg_keys", "GET /user/installations", "GET /user/installations/{installation_id}/repositories", "GET /user/issues", "GET /user/keys", "GET /user/marketplace_purchases", "GET /user/marketplace_purchases/stubbed", "GET /user/memberships/orgs", "GET /user/migrations", "GET /user/migrations/{migration_id}/repositories", "GET /user/orgs", "GET /user/public_emails", "GET /user/repos", "GET /user/repository_invitations", "GET /user/starred", "GET /user/subscriptions", "GET /user/teams", "GET /users", "GET /users/{username}/events", "GET /users/{username}/events/orgs/{org}", "GET /users/{username}/events/public", "GET /users/{username}/followers", "GET /users/{username}/following", "GET /users/{username}/gists", "GET /users/{username}/gpg_keys", "GET /users/{username}/keys", "GET /users/{username}/orgs", "GET /users/{username}/projects", "GET /users/{username}/received_events", "GET /users/{username}/received_events/public", "GET /users/{username}/repos", "GET /users/{username}/starred", "GET /users/{username}/subscriptions"];
+
+function isPaginatingEndpoint(arg) {
+  if (typeof arg === "string") {
+    return paginatingEndpoints.includes(arg);
+  } else {
+    return false;
+  }
+}
+
 /**
  * @param octokit Octokit instance
  * @param options Options passed to Octokit constructor
@@ -4495,7 +4505,10 @@ function paginateRest(octokit) {
 }
 paginateRest.VERSION = VERSION;
 
+exports.composePaginateRest = composePaginateRest;
+exports.isPaginatingEndpoint = isPaginatingEndpoint;
 exports.paginateRest = paginateRest;
+exports.paginatingEndpoints = paginatingEndpoints;
 //# sourceMappingURL=index.js.map
 
 
@@ -7535,7 +7548,7 @@ exports.parseStringResponse = parseStringResponse;
 const core = __webpack_require__(186);
 const { getAuthanticatedUrl } = __webpack_require__(918);
 
-module.exports = {createBranch, clone, push, areFilesChanged};
+module.exports = {createBranch, clone, push, areFilesChanged, getBranches};
 
 async function createBranch(branchName, git) {
   return await git
@@ -7543,8 +7556,11 @@ async function createBranch(branchName, git) {
 }
 
 async function clone(token, remote, dir, git) {
-  return await git
-    .clone(getAuthanticatedUrl(token, remote), dir, {'--depth': 1});
+  await git.clone(getAuthanticatedUrl(token, remote), dir, {'--depth': 1});
+}
+
+async function getBranches(git) {
+  return await git.branchLocal();
 }
 
 async function push(token, url, branchName, message, committerUsername, committerEmail, git) {
@@ -13274,9 +13290,9 @@ const { mkdir } = __webpack_require__(747).promises;
 const { retry } = __webpack_require__(298);
 const { GitHub, getOctokitOptions } = __webpack_require__(30);
 
-const { createBranch, clone, push, areFilesChanged } = __webpack_require__(374);
+const { createBranch, clone, push, areFilesChanged, getBranches } = __webpack_require__(374);
 const { getReposList, createPr } = __webpack_require__(119);
-const { getListOfFilesToReplicate, copyChangedFiles, parseCommaList, getBranchName } = __webpack_require__(918);
+const { getListOfFilesToReplicate, copyChangedFiles, parseCommaList, getBranchName, isInit } = __webpack_require__(918);
 
 const triggerEventName = process.env.GITHUB_EVENT_NAME;
 const eventPayload = require(process.env.GITHUB_EVENT_PATH);
@@ -13332,8 +13348,7 @@ async function run() {
 
     for (const repo of reposList) {
       //start only if repo not on list of ignored
-      //repo also must be initialized repo because only then it has default branch (defaultBranchRef) defined and PR can actually be created
-      if (!ignoredRepositories.includes(repo.name) && repo.defaultBranchRef) {        
+      if (!ignoredRepositories.includes(repo.name)) {        
         core.startGroup(`Started updating ${repo.name} repo`);
         const dir = path.join(process.cwd(), './clones', repo.name);
         await mkdir(dir, {recursive: true});
@@ -13343,15 +13358,21 @@ async function run() {
 
         core.info(`Clonning ${repo.name}.`);
         await clone(gitHubKey, repo.url, dir, git);
+        
+        core.info('Checking if repo initialized and if is not then skip to next one');
+        if (!isInit(await getBranches(git), repo.defaultBranch)) continue;
+
         core.info(`Creating branch ${branchName}.`);
         await createBranch(branchName, git);
+        
         core.info('Copying files');
         await copyChangedFiles(filesToReplicate, dir);
+        
         //pushing and creating PR only if there are changes detected locally
         if (await areFilesChanged(git)) {
           core.info('Pushing changes to remote');
           await push(gitHubKey, repo.url, branchName, commitMessage, committerUsername, committerEmail, git);
-          const pullRequestUrl = await createPr(myOctokit, branchName, repo.id, commitMessage, repo.defaultBranchRef.name);
+          const pullRequestUrl = await createPr(myOctokit, branchName, repo.id, commitMessage, repo.defaultBranch);
           core.endGroup();
 
           if (pullRequestUrl) {
@@ -14378,7 +14399,7 @@ const path = __webpack_require__(622);
 const core = __webpack_require__(186);
 const { getCommitFiles } = __webpack_require__(119);
 
-module.exports = { copyChangedFiles, parseCommaList, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl };
+module.exports = { copyChangedFiles, parseCommaList, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl, isInit };
 
 /**
  * @param  {Object} octokit GitHub API client instance
@@ -14467,6 +14488,18 @@ function getAuthanticatedUrl(token, url) {
   const arr = url.split('//');
   return `https://${token}@${arr[arr.length - 1]}.git`;
 };
+
+/**
+ * Checking if repo is initialized cause if it isn't we need to ignore it
+ * 
+ * @param  {Array<Object>} branches list of all local branches with detail info about them
+ * @param  {String} defaultBranch name of default branch that is always set even if repo not initialized
+ * @returns  {Boolean}
+ */
+function isInit(branches, defaultBranch) {
+  core.debug(`DEBUG: list of local branches: ${branches.branches}`);
+  return !!branches.branches[defaultBranch];
+}
 
 /***/ }),
 
