@@ -7548,7 +7548,7 @@ exports.parseStringResponse = parseStringResponse;
 const core = __webpack_require__(186);
 const { getAuthanticatedUrl } = __webpack_require__(918);
 
-module.exports = {createBranch, clone, push, areFilesChanged};
+module.exports = {createBranch, clone, push, areFilesChanged, getBranches};
 
 async function createBranch(branchName, git) {
   return await git
@@ -7556,8 +7556,11 @@ async function createBranch(branchName, git) {
 }
 
 async function clone(token, remote, dir, git) {
-  return await git
-    .clone(getAuthanticatedUrl(token, remote), dir, {'--depth': 1});
+  await git.clone(getAuthanticatedUrl(token, remote), dir, {'--depth': 1});
+}
+
+async function getBranches(git) {
+  return await git.branchLocal();
 }
 
 async function push(token, url, branchName, message, committerUsername, committerEmail, git) {
@@ -13287,9 +13290,9 @@ const { mkdir } = __webpack_require__(747).promises;
 const { retry } = __webpack_require__(298);
 const { GitHub, getOctokitOptions } = __webpack_require__(30);
 
-const { createBranch, clone, push, areFilesChanged } = __webpack_require__(374);
+const { createBranch, clone, push, areFilesChanged, getBranches } = __webpack_require__(374);
 const { getReposList, createPr } = __webpack_require__(119);
-const { getListOfFilesToReplicate, copyChangedFiles, parseCommaList, getBranchName } = __webpack_require__(918);
+const { getListOfFilesToReplicate, copyChangedFiles, parseCommaList, getBranchName, isInit } = __webpack_require__(918);
 
 const triggerEventName = process.env.GITHUB_EVENT_NAME;
 const eventPayload = require(process.env.GITHUB_EVENT_PATH);
@@ -13345,8 +13348,7 @@ async function run() {
 
     for (const repo of reposList) {
       //start only if repo not on list of ignored
-      //repo also must be initialized repo because only then it has default branch (defaultBranch) defined and PR can actually be created
-      if (!ignoredRepositories.includes(repo.name) && repo.defaultBranch) {        
+      if (!ignoredRepositories.includes(repo.name)) {        
         core.startGroup(`Started updating ${repo.name} repo`);
         const dir = path.join(process.cwd(), './clones', repo.name);
         await mkdir(dir, {recursive: true});
@@ -13356,10 +13358,16 @@ async function run() {
 
         core.info(`Clonning ${repo.name}.`);
         await clone(gitHubKey, repo.url, dir, git);
+        
+        core.info('Checking if repo initialized and if is not then skip to next one');
+        if (!isInit(await getBranches(git), repo.defaultBranch)) continue;
+
         core.info(`Creating branch ${branchName}.`);
         await createBranch(branchName, git);
+        
         core.info('Copying files');
         await copyChangedFiles(filesToReplicate, dir);
+        
         //pushing and creating PR only if there are changes detected locally
         if (await areFilesChanged(git)) {
           core.info('Pushing changes to remote');
@@ -14391,7 +14399,7 @@ const path = __webpack_require__(622);
 const core = __webpack_require__(186);
 const { getCommitFiles } = __webpack_require__(119);
 
-module.exports = { copyChangedFiles, parseCommaList, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl };
+module.exports = { copyChangedFiles, parseCommaList, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl, isInit };
 
 /**
  * @param  {Object} octokit GitHub API client instance
@@ -14480,6 +14488,18 @@ function getAuthanticatedUrl(token, url) {
   const arr = url.split('//');
   return `https://${token}@${arr[arr.length - 1]}.git`;
 };
+
+/**
+ * Checking if repo is initialized cause if it isn't we need to ignore it
+ * 
+ * @param  {Array<Object>} branches list of all local branches with detail info about them
+ * @param  {String} defaultBranch name of default branch that is always set even if repo not initialized
+ * @returns  {Boolean}
+ */
+function isInit(branches, defaultBranch) {
+  core.debug(`DEBUG: list of local branches: ${branches.branches}`);
+  return !!branches.branches[defaultBranch];
+}
 
 /***/ }),
 
