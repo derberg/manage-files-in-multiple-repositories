@@ -1746,12 +1746,12 @@ async function getReposList(octokit, owner) {
       per_page: 100
     });
   }
-
+  
   return response.map((repo) => {
     return { 
       name: repo.name,
       url: repo.html_url,
-      id: repo.id.toString(),
+      id: repo.node_id,
       defaultBranch: repo.default_branch
     };
   });
