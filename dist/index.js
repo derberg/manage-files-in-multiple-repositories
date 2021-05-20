@@ -7533,6 +7533,7 @@ exports.parseStringResponse = parseStringResponse;
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
 const core = __webpack_require__(186);
+const { getAuthanticatedUrl } = __webpack_require__(918);
 
 module.exports = {createBranch, clone, push, areFilesChanged};
 
@@ -7541,23 +7542,18 @@ async function createBranch(branchName, git) {
     .checkout(`-b${branchName}`);
 }
 
-async function clone(remote, dir, git) {
+async function clone(token, remote, dir, git) {
   return await git
-    .clone(remote, dir, {'--depth': 1});
+    .clone(getAuthanticatedUrl(token, remote), dir, {'--depth': 1});
 }
 
 async function push(token, url, branchName, message, committerUsername, committerEmail, git) {
-  const authanticatedUrl = (token, url, user) => {
-    const arr = url.split('//');
-    return `https://${user}:${token}@${arr[arr.length - 1]}`;
-  };
-
   if (core.isDebug()) __webpack_require__(231).enable('simple-git');
 
   await git.addConfig('user.name', committerUsername);
   await git.addConfig('user.email', committerEmail);
   await git.commit(message);
-  await git.addRemote('auth', authanticatedUrl(token, url, committerUsername));
+  await git.addRemote('auth', getAuthanticatedUrl(token, url));
   await git.push(['-u', 'auth', branchName]);
 }
 
@@ -13346,7 +13342,7 @@ async function run() {
         const git = simpleGit({baseDir: dir});
 
         core.info(`Clonning ${repo.name}.`);
-        await clone(repo.url, dir, git);
+        await clone(gitHubKey, repo.url, dir, git);
         core.info(`Creating branch ${branchName}.`);
         await createBranch(branchName, git);
         core.info('Copying files');
@@ -14382,7 +14378,7 @@ const path = __webpack_require__(622);
 const core = __webpack_require__(186);
 const { getCommitFiles } = __webpack_require__(119);
 
-module.exports = { copyChangedFiles, parseCommaList, getBranchName, getListOfFilesToReplicate };
+module.exports = { copyChangedFiles, parseCommaList, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl };
 
 /**
  * @param  {Object} octokit GitHub API client instance
@@ -14459,6 +14455,18 @@ function parseCommaList(list) {
 function getBranchName(commitId) {
   return commitId ? `bot/update-global-workflow-${commitId}` : `bot/manual-update-global-workflow-${Math.random().toString(36).substring(7)}`;
 }
+
+/**
+ * Creates a url with authentication token in it
+ * 
+ * @param  {String} token access token to GitHub
+ * @param  {String} url repo URL
+ * @returns  {String}
+ */
+function getAuthanticatedUrl(token, url) {
+  const arr = url.split('//');
+  return `https://${token}@${arr[arr.length - 1]}.git`;
+};
 
 /***/ }),
 
