@@ -37,6 +37,16 @@ inputs:
       Action already ignores the repo in which the action is triggered so you do not need to add it explicitly.
       In the format `repo1,repo2`.
     required: false
+  topics_to_include:
+    description: >
+      Comma-separated list of topics that should get updates from this action. 
+      Repos that do not contain one of the specified topics will get appended to the repos_to_ignore list. 
+      In the format topic1,topic2.
+    required: false
+  exclude_archived:
+    description: >
+      Boolean value on whether to exclude arcived repositories from this action.
+    required: false
 runs:
   using: node12
   main: dist/index.js
