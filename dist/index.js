@@ -13280,6 +13280,7 @@ const { GitHub, getOctokitOptions } = __webpack_require__(30);
 
 const { createBranch, clone, push, areFilesChanged, getBranches } = __webpack_require__(374);
 const { getReposList, createPr } = __webpack_require__(119);
+const { ignoredByTopics, archivedRepositories } = __webpack_require__(939);
 const { getListOfFilesToReplicate, copyChangedFiles, parseCommaList, getBranchName, isInit } = __webpack_require__(918);
 
 const triggerEventName = process.env.GITHUB_EVENT_NAME;
@@ -13327,46 +13328,27 @@ async function run() {
 
     core.startGroup(`Getting list of all repositories owned by ${owner}`);
     const reposList = await getReposList(myOctokit, owner);
-    core.debug(`DEBUG: list of repositories for ${owner} that this action will iterate over:`);
+    core.debug(`DEBUG: list of repositories for ${owner}:`);
     core.debug(JSON.stringify(reposList, null, 2));
     core.endGroup();
     
-    core.startGroup('Assembling list of repos to be ignored');
     /*
      * Getting list of repos that should be ignored
      */
+    core.startGroup('Assembling list of repos to be ignored');
+    
     const ignoredRepositories = reposToIgnore ? parseCommaList(reposToIgnore) : [];
     //by default repo where workflow runs should always be ignored
     ignoredRepositories.push(repo);
-
-    /*
-     * Getting list of topics that should be included if topics_to_include is set.
-     * Further on we will get a list of repositories that do not belong to any of the specified topics.
-     */
-    const includedTopics = topicsToInclude ? parseCommaList(topicsToInclude) : [];
-    
-    if (includedTopics.length) {
-      // Find all repositories that do not belong to any of the specified topics.
-      const ignoredByTopics = reposList.filter(repo => {
-        return includedTopics.some(topic => repo.topics.includes(topic)) === false;
-      }).map(reposList => reposList.name);
-
-      // Push repository names that do not belong to any of the specified topics to ignoredRepositories array
-      ignoredRepositories.push(...ignoredByTopics);
+    // ignored by topics
+    if (topicsToInclude.length) {
+      ignoredRepositories.push(...ignoredByTopics(topicsToInclude, reposList));
     }
-
-    /*
-     * Getting list of archived sites to be ignored if exclude_archived is true.
-     */
+    // ignored by archived
     if (excludeArchived === true) {
-      // Find all repositories that are archived.
-      const ignoredArchived = reposList.filter(repo => {
-        return repo.archived === true;
-      }).map(reposList => reposList.name);
-
-      // Push repository names that are set to archived
-      ignoredRepositories.push(...ignoredArchived);
+      ignoredRepositories.push(...archivedRepositories(reposList));
     }
+
     core.info(`The following repositories will be ignored: ${ignoredRepositories}`);
     core.endGroup();
 
@@ -15176,6 +15158,45 @@ class Deprecation extends Error {
 
 exports.Deprecation = Deprecation;
 
+
+/***/ }),
+
+/***/ 939:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const { parseCommaList } = __webpack_require__(918);
+
+module.exports = {ignoredByTopics, archivedRepositories};
+
+/**
+ * Getting list of topics that should be included if topics_to_include is set.
+ * Further on we will get a list of repositories that do not belong to any of the specified topics.
+ * 
+ * @param  {Array} topicsToInclude Array of topics to inlcude.
+ * @param  {Array} reposList All the repositories.
+ * @returns {Array} List of all repositories to exclude.
+ */
+function ignoredByTopics(topicsToInclude, reposList) {
+  const includedTopics = topicsToInclude ? parseCommaList(topicsToInclude) : [];
+
+  if (!includedTopics.length) return;
+
+  return reposList.filter(repo => {
+    return includedTopics.some(topic => repo.topics.includes(topic)) === false;
+  }).map(reposList => reposList.name);
+}
+
+/**
+ * Getting list of archived sites to be ignored if exclude_archived is true.
+ * 
+ * @param  {Array} reposList All the repositories.
+ * @returns {Array} List of all archived repositories.
+ */
+function archivedRepositories(reposList) {
+  return reposList.filter(repo => {
+    return repo.archived === true;
+  }).map(reposList => reposList.name);
+}
 
 /***/ }),
 
