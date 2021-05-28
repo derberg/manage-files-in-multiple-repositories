@@ -13280,8 +13280,7 @@ const { GitHub, getOctokitOptions } = __webpack_require__(30);
 
 const { createBranch, clone, push, areFilesChanged, getBranches } = __webpack_require__(374);
 const { getReposList, createPr } = __webpack_require__(119);
-const { ignoredByTopics, archivedRepositories } = __webpack_require__(939);
-const { getListOfFilesToReplicate, copyChangedFiles, parseCommaList, getBranchName, isInit } = __webpack_require__(918);
+const { getListOfFilesToReplicate, copyChangedFiles, getIgnoredRepositories, getBranchName, isInit } = __webpack_require__(918);
 
 const triggerEventName = process.env.GITHUB_EVENT_NAME;
 const eventPayload = require(process.env.GITHUB_EVENT_PATH);
@@ -13299,14 +13298,12 @@ async function run() {
     const committerUsername = core.getInput('committer_username');
     const committerEmail = core.getInput('committer_email');
     const commitMessage = core.getInput('commit_message');
-    const reposToIgnore = core.getInput('repos_to_ignore');
-    const topicsToInclude = core.getInput('topics_to_include');
-    const excludeArchived = core.getInput('include_archived');
 
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
 
     const octokit = GitHub.plugin(retry);
     const myOctokit = new octokit(getOctokitOptions(gitHubKey, {
+      // Topics are currently only available using mercy-preview.
       previews: ['mercy-preview'],
     }));
 
@@ -13336,19 +13333,11 @@ async function run() {
      * Getting list of repos that should be ignored
      */
     core.startGroup('Assembling list of repos to be ignored');
-    
-    const ignoredRepositories = reposToIgnore ? parseCommaList(reposToIgnore) : [];
-    //by default repo where workflow runs should always be ignored
-    ignoredRepositories.push(repo);
-    // ignored by topics
-    if (topicsToInclude.length) {
-      ignoredRepositories.push(...ignoredByTopics(topicsToInclude, reposList));
-    }
-    // ignored by archived
-    if (excludeArchived === true) {
-      ignoredRepositories.push(...archivedRepositories(reposList));
-    }
-
+    const ignoredRepositories = getIgnoredRepositories(repo, reposList, {
+      reposToIgnore: core.getInput('repos_to_ignore'),
+      topicsToInclude: core.getInput('topics_to_include'),
+      excludeArchived: !!core.getInput('include_archived'),
+    });
     core.info(`The following repositories will be ignored: ${ignoredRepositories}`);
     core.endGroup();
 
@@ -14404,8 +14393,9 @@ const { readdir } = __webpack_require__(747).promises;
 const path = __webpack_require__(622);
 const core = __webpack_require__(186);
 const { getCommitFiles } = __webpack_require__(119);
+const { ignoredByTopics, archivedRepositories } = __webpack_require__(939);
 
-module.exports = { copyChangedFiles, parseCommaList, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl, isInit };
+module.exports = { copyChangedFiles, parseCommaList, getIgnoredRepositories, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl, isInit };
 
 /**
  * @param  {Object} octokit GitHub API client instance
@@ -14452,6 +14442,34 @@ async function getListOfFilesToReplicate(octokit, commitId, owner, repo, filesTo
   }
 
   return changedFiles;
+}
+
+/**
+ * Assemble a list of repositories that should be ignored.
+ * 
+ * @param  {String} repo The current repository.
+ * @param  {Array} reposList All the repositories.
+ * @returns  {Array}
+ */
+function getIgnoredRepositories(repo, reposList, filters) {
+  const {
+    reposToIgnore,
+    topicsToInclude,
+    excludeArchived
+  } = filters;
+  //manually ignored repositories.
+  const ignoredRepositories = reposToIgnore ? parseCommaList(reposToIgnore) : [];
+  //by default repo where workflow runs should always be ignored.
+  ignoredRepositories.push(repo);
+  // if topics_to_ignore is set, get ignored repositories by topics.
+  if (topicsToInclude.length) {
+    ignoredRepositories.push(...ignoredByTopics(topicsToInclude, reposList));
+  }
+  // ignored by archived.
+  if (excludeArchived) {
+    ignoredRepositories.push(...archivedRepositories(reposList));
+  }
+  return ignoredRepositories;
 }
 
 /**
@@ -15172,7 +15190,7 @@ module.exports = {ignoredByTopics, archivedRepositories};
  * Getting list of topics that should be included if topics_to_include is set.
  * Further on we will get a list of repositories that do not belong to any of the specified topics.
  * 
- * @param  {Array} topicsToInclude Array of topics to inlcude.
+ * @param  {String} topicsToInclude Comma separated list of topics to include.
  * @param  {Array} reposList All the repositories.
  * @returns {Array} List of all repositories to exclude.
  */
