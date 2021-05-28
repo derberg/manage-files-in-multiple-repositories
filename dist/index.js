@@ -13280,7 +13280,7 @@ const { GitHub, getOctokitOptions } = __webpack_require__(30);
 
 const { createBranch, clone, push, areFilesChanged, getBranches } = __webpack_require__(374);
 const { getReposList, createPr } = __webpack_require__(119);
-const { getListOfFilesToReplicate, copyChangedFiles, getIgnoredRepositories, getBranchName, isInit } = __webpack_require__(918);
+const { getListOfFilesToReplicate, copyChangedFiles, getListOfReposToIgnore, getBranchName, isInit } = __webpack_require__(918);
 
 const triggerEventName = process.env.GITHUB_EVENT_NAME;
 const eventPayload = require(process.env.GITHUB_EVENT_PATH);
@@ -13333,7 +13333,7 @@ async function run() {
      * Getting list of repos that should be ignored
      */
     core.startGroup('Assembling list of repos to be ignored');
-    const ignoredRepositories = getIgnoredRepositories(repo, reposList, {
+    const ignoredRepositories = getListOfReposToIgnore(repo, reposList, {
       reposToIgnore: core.getInput('repos_to_ignore'),
       topicsToInclude: core.getInput('topics_to_include'),
       excludeArchived: !!core.getInput('include_archived'),
@@ -14445,24 +14445,6 @@ async function getListOfFilesToReplicate(octokit, commitId, owner, repo, filesTo
 }
 
 /**
- * @param  {Array} filesList list of files that need to be copied
- * @param  {String} destination where file should be copied
- */
-async function copyChangedFiles(filesList, destination) {
-  await Promise.all(filesList.map(async filepath => {
-    return await copy(path.join(process.cwd(), filepath), path.join(destination, filepath));
-  }));
-}
-
-/**
- * @param  {String} list names of values that can be separated by comma
- * @returns  {Array<String>} input names not separated by string but as separate array items
- */
-function parseCommaList(list) {
-  return list.split(',').map(i => i.trim().replace(/['"]+/g, ''));
-}
-
-/**
  * Assemble a list of repositories that should be ignored.
  * 
  * @param  {String} repo The current repository.
@@ -14473,7 +14455,7 @@ function parseCommaList(list) {
  * 
  * @returns  {Array}
  */
-function getIgnoredRepositories(repo, reposList, inputs) {
+async function getIgnoredRepositories(repo, reposList, inputs) {
   const {
     reposToIgnore,
     topicsToInclude,
@@ -14492,6 +14474,24 @@ function getIgnoredRepositories(repo, reposList, inputs) {
     ignoredRepositories.push(...archivedRepositories(reposList));
   }
   return ignoredRepositories;
+}
+
+/**
+ * @param  {Array} filesList list of files that need to be copied
+ * @param  {String} destination where file should be copied
+ */
+async function copyChangedFiles(filesList, destination) {
+  await Promise.all(filesList.map(async filepath => {
+    return await copy(path.join(process.cwd(), filepath), path.join(destination, filepath));
+  }));
+}
+
+/**
+ * @param  {String} list names of values that can be separated by comma
+ * @returns  {Array<String>} input names not separated by string but as separate array items
+ */
+function parseCommaList(list) {
+  return list.split(',').map(i => i.trim().replace(/['"]+/g, ''));
 }
 
 /**
