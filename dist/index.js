@@ -14445,6 +14445,24 @@ async function getListOfFilesToReplicate(octokit, commitId, owner, repo, filesTo
 }
 
 /**
+ * @param  {Array} filesList list of files that need to be copied
+ * @param  {String} destination where file should be copied
+ */
+async function copyChangedFiles(filesList, destination) {
+  await Promise.all(filesList.map(async filepath => {
+    return await copy(path.join(process.cwd(), filepath), path.join(destination, filepath));
+  }));
+}
+
+/**
+ * @param  {String} list names of values that can be separated by comma
+ * @returns  {Array<String>} input names not separated by string but as separate array items
+ */
+function parseCommaList(list) {
+  return list.split(',').map(i => i.trim().replace(/['"]+/g, ''));
+}
+
+/**
  * Assemble a list of repositories that should be ignored.
  * 
  * @param  {String} repo The current repository.
@@ -14474,24 +14492,6 @@ function getIgnoredRepositories(repo, reposList, inputs) {
     ignoredRepositories.push(...archivedRepositories(reposList));
   }
   return ignoredRepositories;
-}
-
-/**
- * @param  {Array} filesList list of files that need to be copied
- * @param  {String} destination where file should be copied
- */
-async function copyChangedFiles(filesList, destination) {
-  await Promise.all(filesList.map(async filepath => {
-    return await copy(path.join(process.cwd(), filepath), path.join(destination, filepath));
-  }));
-}
-
-/**
- * @param  {String} list names of values that can be separated by comma
- * @returns  {Array<String>} input names not separated by string but as separate array items
- */
-function parseCommaList(list) {
-  return list.split(',').map(i => i.trim().replace(/['"]+/g, ''));
 }
 
 /**
