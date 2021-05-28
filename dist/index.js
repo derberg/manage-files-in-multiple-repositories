@@ -14393,7 +14393,6 @@ const { readdir } = __webpack_require__(747).promises;
 const path = __webpack_require__(622);
 const core = __webpack_require__(186);
 const { getCommitFiles } = __webpack_require__(119);
-const { ignoredByTopics, archivedRepositories } = __webpack_require__(939);
 
 module.exports = { copyChangedFiles, parseCommaList, getListOfReposToIgnore, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl, isInit };
 
@@ -14527,6 +14526,36 @@ function getAuthanticatedUrl(token, url) {
 function isInit(branches, defaultBranch) {
   core.debug(`DEBUG: list of local branches: ${branches.branches}`);
   return !!branches.branches[defaultBranch];
+}
+
+/**
+ * Getting list of topics that should be included if topics_to_include is set.
+ * Further on we will get a list of repositories that do not belong to any of the specified topics.
+ * 
+ * @param  {String} topicsToInclude Comma separated list of topics to include.
+ * @param  {Array} reposList All the repositories.
+ * @returns {Array} List of all repositories to exclude.
+ */
+function ignoredByTopics(topicsToInclude, reposList) {
+  const includedTopics = topicsToInclude ? parseCommaList(topicsToInclude) : [];
+
+  if (!includedTopics.length) return;
+
+  return reposList.filter(repo => {
+    return includedTopics.some(topic => repo.topics.includes(topic)) === false;
+  }).map(reposList => reposList.name);
+}
+
+/**
+ * Getting list of archived sites to be ignored if exclude_archived is true.
+ * 
+ * @param  {Array} reposList All the repositories.
+ * @returns {Array} List of all archived repositories.
+ */
+function archivedRepositories(reposList) {
+  return reposList.filter(repo => {
+    return repo.archived === true;
+  }).map(reposList => reposList.name);
 }
 
 /***/ }),
@@ -15180,45 +15209,6 @@ class Deprecation extends Error {
 
 exports.Deprecation = Deprecation;
 
-
-/***/ }),
-
-/***/ 939:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const { parseCommaList } = __webpack_require__(918);
-
-module.exports = {ignoredByTopics, archivedRepositories};
-
-/**
- * Getting list of topics that should be included if topics_to_include is set.
- * Further on we will get a list of repositories that do not belong to any of the specified topics.
- * 
- * @param  {String} topicsToInclude Comma separated list of topics to include.
- * @param  {Array} reposList All the repositories.
- * @returns {Array} List of all repositories to exclude.
- */
-function ignoredByTopics(topicsToInclude, reposList) {
-  const includedTopics = topicsToInclude ? parseCommaList(topicsToInclude) : [];
-
-  if (!includedTopics.length) return;
-
-  return reposList.filter(repo => {
-    return includedTopics.some(topic => repo.topics.includes(topic)) === false;
-  }).map(reposList => reposList.name);
-}
-
-/**
- * Getting list of archived sites to be ignored if exclude_archived is true.
- * 
- * @param  {Array} reposList All the repositories.
- * @returns {Array} List of all archived repositories.
- */
-function archivedRepositories(reposList) {
-  return reposList.filter(repo => {
-    return repo.archived === true;
-  }).map(reposList => reposList.name);
-}
 
 /***/ }),
 
