@@ -14395,7 +14395,7 @@ const core = __webpack_require__(186);
 const { getCommitFiles } = __webpack_require__(119);
 const { ignoredByTopics, archivedRepositories } = __webpack_require__(939);
 
-module.exports = { copyChangedFiles, parseCommaList, getIgnoredRepositories, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl, isInit };
+module.exports = { copyChangedFiles, parseCommaList, getListOfReposToIgnore, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl, isInit };
 
 /**
  * @param  {Object} octokit GitHub API client instance
@@ -14455,7 +14455,7 @@ async function getListOfFilesToReplicate(octokit, commitId, owner, repo, filesTo
  * 
  * @returns  {Array}
  */
-async function getIgnoredRepositories(repo, reposList, inputs) {
+function getListOfReposToIgnore(repo, reposList, inputs) {
   const {
     reposToIgnore,
     topicsToInclude,
