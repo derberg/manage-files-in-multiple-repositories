@@ -13340,8 +13340,6 @@ async function run() {
       excludePrivate: (core.getInput('exclude_private') === 'true'),
     });
 
-    core.info(`Raw exclude priv test: ${core.getInput('exclude_private')}.`);
-
     core.info(`The following repositories will be ignored: ${ignoredRepositories}`);
     core.endGroup();
 
@@ -14454,7 +14452,7 @@ async function getListOfFilesToReplicate(octokit, commitId, owner, repo, filesTo
  * @param  {Array} reposList All the repositories.
  * @param  {String} inputs.reposToIgnore A comma separated list of repositories to ignore.
  * @param  {String} inputs.topicsToInclude A comma separated list of topics to include.
- * @param  {Boolean} inputs.excludeArchived Include archived repositories.
+ * @param  {Boolean} inputs.excludePrivate Exclude private repositories.
  * 
  * @returns  {Array}
  */
@@ -14484,19 +14482,8 @@ function getListOfReposToIgnore(repo, reposList, inputs) {
 
   // Exclude private repositories.
   if (excludePrivate === true) {
-    core.info('Private repositories were excluded');
     ignoredRepositories.push(...privateRepositories(reposList));
   }
-
-  if (typeof excludePrivate === 'boolean') {
-    core.info('Github inputs are booleans');
-  } else {
-    core.info('Github inputs are strings');
-  }
-
-  // Debugging temp
-  core.info(`Private repositories setting: ${excludePrivate}.`);
-  core.info(`Private repositories: ${privateRepositories(reposList)}.`);
 
   return ignoredRepositories;
 }
