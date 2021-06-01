@@ -14467,7 +14467,7 @@ function getListOfReposToIgnore(repo, reposList, inputs) {
 
   // Exclude archived repositories by default. The action will fail otherwise.
   const EXCLUDE_ARCHIVED = true;
-  if (EXCLUDE_ARCHIVED) {
+  if (EXCLUDE_ARCHIVED === true) {
     ignoredRepositories.push(...archivedRepositories(reposList));
   }
 
@@ -14480,7 +14480,7 @@ function getListOfReposToIgnore(repo, reposList, inputs) {
   }
 
   // Exclude private repositories.
-  if (excludePrivate) {
+  if (excludePrivate === true) {
     ignoredRepositories.push(...privateRepositories(reposList));
   }
 
