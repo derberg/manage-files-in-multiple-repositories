@@ -13337,7 +13337,7 @@ async function run() {
     const ignoredRepositories = getListOfReposToIgnore(repo, reposList, {
       reposToIgnore: core.getInput('repos_to_ignore'),
       topicsToInclude: core.getInput('topics_to_include'),
-      excludePrivate: !!core.getInput('exclude_private'),
+      excludePrivate: core.getInput('exclude_private'),
     });
     core.info(`Raw exclude priv test: ${core.getInput('exclude_private')}.`);
 
@@ -14483,6 +14483,7 @@ function getListOfReposToIgnore(repo, reposList, inputs) {
 
   // Exclude private repositories.
   if (excludePrivate === true) {
+    core.info('Private repositories were excluded');
     ignoredRepositories.push(...privateRepositories(reposList));
   }
 
