@@ -13339,6 +13339,8 @@ async function run() {
       topicsToInclude: core.getInput('topics_to_include'),
       excludePrivate: !!core.getInput('exclude_private'),
     });
+    core.info(`Raw exclude priv test: ${core.getInput('exclude_private')}.`);
+
     core.info(`The following repositories will be ignored: ${ignoredRepositories}`);
     core.endGroup();
 
