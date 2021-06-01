@@ -1753,6 +1753,7 @@ async function getReposList(octokit, owner) {
       url: repo.html_url,
       id: repo.node_id,
       defaultBranch: repo.default_branch,
+      private: repo.private,
       archived: repo.archived,
       topics: repo.topics,
     };
@@ -13336,7 +13337,7 @@ async function run() {
     const ignoredRepositories = getListOfReposToIgnore(repo, reposList, {
       reposToIgnore: core.getInput('repos_to_ignore'),
       topicsToInclude: core.getInput('topics_to_include'),
-      excludeArchived: !!core.getInput('include_archived'),
+      excludePrivate: !!core.getInput('exclude_private'),
     });
     core.info(`The following repositories will be ignored: ${ignoredRepositories}`);
     core.endGroup();
@@ -14458,20 +14459,31 @@ function getListOfReposToIgnore(repo, reposList, inputs) {
   const {
     reposToIgnore,
     topicsToInclude,
-    excludeArchived
+    excludePrivate,
   } = inputs;
+
   //manually ignored repositories.
   const ignoredRepositories = reposToIgnore ? parseCommaList(reposToIgnore) : [];
+
+  // Exclude archived repositories by default. The action will fail otherwise.
+  const EXCLUDE_ARCHIVED = true;
+  if (EXCLUDE_ARCHIVED) {
+    ignoredRepositories.push(...archivedRepositories(reposList));
+  }
+
   //by default repo where workflow runs should always be ignored.
   ignoredRepositories.push(repo);
+
   // if topics_to_ignore is set, get ignored repositories by topics.
   if (topicsToInclude.length) {
     ignoredRepositories.push(...ignoredByTopics(topicsToInclude, reposList));
   }
-  // ignored by archived.
-  if (excludeArchived) {
-    ignoredRepositories.push(...archivedRepositories(reposList));
+
+  // Exclude private repositories.
+  if (excludePrivate) {
+    ignoredRepositories.push(...privateRepositories(reposList));
   }
+
   return ignoredRepositories;
 }
 
@@ -14547,14 +14559,26 @@ function ignoredByTopics(topicsToInclude, reposList) {
 }
 
 /**
- * Getting list of archived sites to be ignored if exclude_archived is true.
+ * Returns a list of archived repositories.
  * 
  * @param  {Array} reposList All the repositories.
- * @returns {Array} List of all archived repositories.
+ * @returns {Array}
  */
 function archivedRepositories(reposList) {
   return reposList.filter(repo => {
     return repo.archived === true;
+  }).map(reposList => reposList.name);
+}
+
+/**
+ * Returns a list of private repositories.
+ * 
+ * @param  {Array} reposList All the repositories.
+ * @returns {Array}
+ */
+function privateRepositories(reposList) {
+  return reposList.filter(repo => {
+    return repo.private === true;
   }).map(reposList => reposList.name);
 }
 
