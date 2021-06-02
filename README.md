@@ -46,6 +46,8 @@ committer_username | The username (not display name) of the committer will be us
 committer_email | The committer's email that will be used in the commit of changes in the workflow file in a specific repository. In the format `noreply@github.com`.| false | `noreply@github.com`
 commit_message | It is used as a commit message when pushing changes with global workflows. It is also used as a title of the pull request that is created by this action. | false | `Update global workflows`
 repos_to_ignore | Comma-separated list of repositories that should not get updates from this action. Action already ignores the repo in which the action is triggered so you do not need to add it explicitly. In the format `repo1,repo2`. | false | -
+topics_to_include | Comma-separated list of topics that should get updates from this action. Repos that do not contain one of the specified topics will get appended to the repos_to_ignore list. In the format `topic1,topic2`. | false | -
+exclude_private | Boolean value on whether to exclude private repositories from this action. | false | false
 
 ## Examples
 
@@ -98,6 +100,8 @@ jobs:
                 github_token: ${{ secrets.CUSTOM_TOKEN }}
                 files_to_ignore: name_of_file_where_this_action_is_used.yml
                 repos_to_ignore: repo1,repo2
+                topics_to_include: topic1,topic2
+                exclude_private: true
                 committer_username: santiago-bernabeu
                 committer_email: my-email@me.com
                 commit_message: "ci: update global workflows"
