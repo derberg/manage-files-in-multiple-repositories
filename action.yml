@@ -48,6 +48,11 @@ inputs:
       Repos that do not contain one of the specified topics will get appended to the repos_to_ignore list. 
       In the format topic1,topic2.
     required: false
+  exclude_forked:
+    description: >
+      Boolean value on whether to exclude forked repositories from this action.
+    default: false
+    required: false
   exclude_private:
     description: >
       Boolean value on whether to exclude private repositories from this action.

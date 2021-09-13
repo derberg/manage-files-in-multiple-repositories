@@ -8885,6 +8885,7 @@ async function run() {
     const ignoredRepositories = getListOfReposToIgnore(repo, reposList, {
       reposToIgnore: core.getInput('repos_to_ignore'),
       topicsToInclude: core.getInput('topics_to_include'),
+      excludeForked: (core.getInput('exclude_forked') === 'true'),
       excludePrivate: (core.getInput('exclude_private') === 'true'),
     });
 
@@ -10620,6 +10621,7 @@ async function getListOfFilesToReplicate(octokit, commitId, owner, repo, filesTo
  * @param  {Array} reposList All the repositories.
  * @param  {String} inputs.reposToIgnore A comma separated list of repositories to ignore.
  * @param  {String} inputs.topicsToInclude A comma separated list of topics to include.
+ * @param  {Boolean} inputs.excludeForked Exclude forked repositories.
  * @param  {Boolean} inputs.excludePrivate Exclude private repositories.
  * 
  * @returns  {Array}
@@ -10628,6 +10630,7 @@ function getListOfReposToIgnore(repo, reposList, inputs) {
   const {
     reposToIgnore,
     topicsToInclude,
+    excludeForked,
     excludePrivate,
   } = inputs;
 
@@ -10646,6 +10649,11 @@ function getListOfReposToIgnore(repo, reposList, inputs) {
   // if topics_to_ignore is set, get ignored repositories by topics.
   if (topicsToInclude.length) {
     ignoredRepositories.push(...ignoredByTopics(topicsToInclude, reposList));
+  }
+
+  // Exclude forked repositories
+  if (excludeForked === true) {
+    ignoredRepositories.push(...forkedRepositories(reposList));
   }
 
   // Exclude private repositories.
@@ -10748,6 +10756,18 @@ function archivedRepositories(reposList) {
 function privateRepositories(reposList) {
   return reposList.filter(repo => {
     return repo.private === true;
+  }).map(reposList => reposList.name);
+}
+
+/**
+ * Returns a list of forked repositories.
+ * 
+ * @param  {Array} reposList All the repositories.
+ * @returns {Array}
+ */
+function forkedRepositories(reposList) {
+  return reposList.filter(repo => {
+    return repo.fork === true;
   }).map(reposList => reposList.name);
 }
 
