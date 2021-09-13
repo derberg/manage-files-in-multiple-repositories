@@ -31,6 +31,11 @@ inputs:
       You must provide here at least the name of the workflow file that uses this action.
       In the format `file.yml,another_file.yml`.
     required: true
+  files_to_include:
+    description: >
+      Comma-seperated list of additional files that should be included by this action and not updated in other repositories.
+      In the format `file.yml,another_file.yml`.
+    required: false
   repos_to_ignore:
     description: >
       Comma-separated list of repositories that should not get updates from this action.
