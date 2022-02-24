@@ -13379,7 +13379,7 @@ async function run() {
      */
     let reposList = [];
     if (isWorkflowDispatch && repoNameManual) {
-      reposList.push(getRepo(myOctokit, owner, repoNameManual));
+      reposList.push(await getRepo(myOctokit, owner, repoNameManual));
     } else {
       reposList = await getReposList(myOctokit, owner);
     }
