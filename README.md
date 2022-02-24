@@ -69,7 +69,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: derberg/global-workflows-support@v0.0.2
+      - uses: derberg/global-workflows-support@v0.6.0
         with:
           github_token: ${{ secrets.CUSTOM_TOKEN }}
           files_to_ignore: name_of_file_where_this_action_is_used.yml
@@ -95,7 +95,7 @@ jobs:
             - name: Checkout repository
               uses: actions/checkout@v2
             - name: Replicating global workflow
-              uses: derberg/global-workflows-support@v0.0.2
+              uses: derberg/global-workflows-support@v0.6.0
               with:
                 github_token: ${{ secrets.CUSTOM_TOKEN }}
                 files_to_ignore: name_of_file_where_this_action_is_used.yml
