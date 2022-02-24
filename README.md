@@ -32,6 +32,22 @@ This action can be triggered by:
 
   <img src="workflow_dispatch.jpg" alt="flow diagram" width="40%">
 
+  This action also allows you to specify a single repository that action should run against. You can add the following input trigger in your workflow:
+
+  ```yml
+    workflow_dispatch:
+      inputs:
+        repo_name:
+          description: |
+            You can specify name of the repository where workflows should be pushed manually. As long as repository is not ignored by workflow settings.
+            If you do not specify exact repository name, the workflow will try to replicate all missing changes to all repositories.
+          required: false
+  ```
+
+  As a result you will be able to run your workflow manually by providing specific repository name. If name is not provided, action will fallback to run against all repositores. If wrong repo name is provided under `repo_name`, the action will fail.
+
+  <img src="workflow_dispatch_custom_repo.png" alt="flow diagram" width="40%">
+
 ## Action Flow
 
  <img src="diagram.png" alt="flow diagram" width="40%"> 
@@ -69,7 +85,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: derberg/global-workflows-support@v0.6.0
+      - uses: derberg/global-workflows-support@v0.7.0
         with:
           github_token: ${{ secrets.CUSTOM_TOKEN }}
           files_to_ignore: name_of_file_where_this_action_is_used.yml
@@ -95,7 +111,7 @@ jobs:
             - name: Checkout repository
               uses: actions/checkout@v2
             - name: Replicating global workflow
-              uses: derberg/global-workflows-support@v0.6.0
+              uses: derberg/global-workflows-support@v0.7.0
               with:
                 github_token: ${{ secrets.CUSTOM_TOKEN }}
                 files_to_ignore: name_of_file_where_this_action_is_used.yml
