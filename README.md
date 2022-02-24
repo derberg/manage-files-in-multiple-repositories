@@ -64,6 +64,7 @@ commit_message | It is used as a commit message when pushing changes with global
 repos_to_ignore | Comma-separated list of repositories that should not get updates from this action. Action already ignores the repo in which the action is triggered so you do not need to add it explicitly. In the format `repo1,repo2`. | false | -
 topics_to_include | Comma-separated list of topics that should get updates from this action. Repos that do not contain one of the specified topics will get appended to the repos_to_ignore list. In the format `topic1,topic2`. | false | -
 exclude_private | Boolean value on whether to exclude private repositories from this action. | false | false
+exclude_forked | Boolean value on whether to exclude forked repositories from this action. | false | false
 
 ## Examples
 
@@ -118,6 +119,7 @@ jobs:
                 repos_to_ignore: repo1,repo2
                 topics_to_include: topic1,topic2
                 exclude_private: true
+                exclude_forked: true
                 committer_username: santiago-bernabeu
                 committer_email: my-email@me.com
                 commit_message: "ci: update global workflows"
