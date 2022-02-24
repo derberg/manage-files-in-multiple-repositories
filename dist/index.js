@@ -1708,6 +1708,7 @@ async function getReposList(octokit, owner) {
   let isUser;
   let response;
 
+  core.startGroup(`Getting list of all repositories owned by ${owner}`);
   /*
   * Checking if action runs for organization or user as then to list repost there are different api calls
   */
@@ -1747,7 +1748,7 @@ async function getReposList(octokit, owner) {
     });
   }
   
-  return response.map((repo) => {
+  const reposList = response.map((repo) => {
     return { 
       name: repo.name,
       url: repo.html_url,
@@ -1758,6 +1759,12 @@ async function getReposList(octokit, owner) {
       topics: repo.topics,
     };
   });
+
+  core.debug(`DEBUG: list of repositories for ${owner}:`);
+  core.debug(JSON.stringify(reposList, null, 2));
+  core.endGroup();
+
+  return reposList;
 }
 
 async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
@@ -4373,7 +4380,7 @@ exports.getState = getState;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-const VERSION = "2.3.0";
+const VERSION = "2.13.3";
 
 /**
  * Some “list” response that can be paginated have a different response structure
@@ -4426,26 +4433,23 @@ function iterator(octokit, route, parameters) {
   let url = options.url;
   return {
     [Symbol.asyncIterator]: () => ({
-      next() {
-        if (!url) {
-          return Promise.resolve({
-            done: true
-          });
-        }
-
-        return requestMethod({
+      async next() {
+        if (!url) return {
+          done: true
+        };
+        const response = await requestMethod({
           method,
           url,
           headers
-        }).then(normalizePaginatedListResponse).then(response => {
-          // `response.headers.link` format:
-          // '<https://api.github.com/users/aseemk/followers?page=2>; rel="next", <https://api.github.com/users/aseemk/followers?page=2>; rel="last"'
-          // sets `url` to undefined if "next" URL is not present or `link` header is not set
-          url = ((response.headers.link || "").match(/<([^>]+)>;\s*rel="next"/) || [])[1];
-          return {
-            value: response
-          };
         });
+        const normalizedResponse = normalizePaginatedListResponse(response); // `response.headers.link` format:
+        // '<https://api.github.com/users/aseemk/followers?page=2>; rel="next", <https://api.github.com/users/aseemk/followers?page=2>; rel="last"'
+        // sets `url` to undefined if "next" URL is not present or `link` header is not set
+
+        url = ((normalizedResponse.headers.link || "").match(/<([^>]+)>;\s*rel="next"/) || [])[1];
+        return {
+          value: normalizedResponse
+        };
       }
 
     })
@@ -4483,6 +4487,20 @@ function gather(octokit, results, iterator, mapFn) {
   });
 }
 
+const composePaginateRest = Object.assign(paginate, {
+  iterator
+});
+
+const paginatingEndpoints = ["GET /app/installations", "GET /applications/grants", "GET /authorizations", "GET /enterprises/{enterprise}/actions/permissions/organizations", "GET /enterprises/{enterprise}/actions/runner-groups", "GET /enterprises/{enterprise}/actions/runner-groups/{runner_group_id}/organizations", "GET /enterprises/{enterprise}/actions/runner-groups/{runner_group_id}/runners", "GET /enterprises/{enterprise}/actions/runners", "GET /enterprises/{enterprise}/actions/runners/downloads", "GET /events", "GET /gists", "GET /gists/public", "GET /gists/starred", "GET /gists/{gist_id}/comments", "GET /gists/{gist_id}/commits", "GET /gists/{gist_id}/forks", "GET /installation/repositories", "GET /issues", "GET /marketplace_listing/plans", "GET /marketplace_listing/plans/{plan_id}/accounts", "GET /marketplace_listing/stubbed/plans", "GET /marketplace_listing/stubbed/plans/{plan_id}/accounts", "GET /networks/{owner}/{repo}/events", "GET /notifications", "GET /organizations", "GET /orgs/{org}/actions/permissions/repositories", "GET /orgs/{org}/actions/runner-groups", "GET /orgs/{org}/actions/runner-groups/{runner_group_id}/repositories", "GET /orgs/{org}/actions/runner-groups/{runner_group_id}/runners", "GET /orgs/{org}/actions/runners", "GET /orgs/{org}/actions/runners/downloads", "GET /orgs/{org}/actions/secrets", "GET /orgs/{org}/actions/secrets/{secret_name}/repositories", "GET /orgs/{org}/blocks", "GET /orgs/{org}/credential-authorizations", "GET /orgs/{org}/events", "GET /orgs/{org}/failed_invitations", "GET /orgs/{org}/hooks", "GET /orgs/{org}/installations", "GET /orgs/{org}/invitations", "GET /orgs/{org}/invitations/{invitation_id}/teams", "GET /orgs/{org}/issues", "GET /orgs/{org}/members", "GET /orgs/{org}/migrations", "GET /orgs/{org}/migrations/{migration_id}/repositories", "GET /orgs/{org}/outside_collaborators", "GET /orgs/{org}/projects", "GET /orgs/{org}/public_members", "GET /orgs/{org}/repos", "GET /orgs/{org}/team-sync/groups", "GET /orgs/{org}/teams", "GET /orgs/{org}/teams/{team_slug}/discussions", "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments", "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}/reactions", "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/reactions", "GET /orgs/{org}/teams/{team_slug}/invitations", "GET /orgs/{org}/teams/{team_slug}/members", "GET /orgs/{org}/teams/{team_slug}/projects", "GET /orgs/{org}/teams/{team_slug}/repos", "GET /orgs/{org}/teams/{team_slug}/team-sync/group-mappings", "GET /orgs/{org}/teams/{team_slug}/teams", "GET /projects/columns/{column_id}/cards", "GET /projects/{project_id}/collaborators", "GET /projects/{project_id}/columns", "GET /repos/{owner}/{repo}/actions/artifacts", "GET /repos/{owner}/{repo}/actions/runners", "GET /repos/{owner}/{repo}/actions/runners/downloads", "GET /repos/{owner}/{repo}/actions/runs", "GET /repos/{owner}/{repo}/actions/runs/{run_id}/artifacts", "GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs", "GET /repos/{owner}/{repo}/actions/secrets", "GET /repos/{owner}/{repo}/actions/workflows", "GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs", "GET /repos/{owner}/{repo}/assignees", "GET /repos/{owner}/{repo}/branches", "GET /repos/{owner}/{repo}/check-runs/{check_run_id}/annotations", "GET /repos/{owner}/{repo}/check-suites/{check_suite_id}/check-runs", "GET /repos/{owner}/{repo}/code-scanning/alerts", "GET /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}/instances", "GET /repos/{owner}/{repo}/code-scanning/analyses", "GET /repos/{owner}/{repo}/collaborators", "GET /repos/{owner}/{repo}/comments", "GET /repos/{owner}/{repo}/comments/{comment_id}/reactions", "GET /repos/{owner}/{repo}/commits", "GET /repos/{owner}/{repo}/commits/{commit_sha}/branches-where-head", "GET /repos/{owner}/{repo}/commits/{commit_sha}/comments", "GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls", "GET /repos/{owner}/{repo}/commits/{ref}/check-runs", "GET /repos/{owner}/{repo}/commits/{ref}/check-suites", "GET /repos/{owner}/{repo}/commits/{ref}/statuses", "GET /repos/{owner}/{repo}/contributors", "GET /repos/{owner}/{repo}/deployments", "GET /repos/{owner}/{repo}/deployments/{deployment_id}/statuses", "GET /repos/{owner}/{repo}/events", "GET /repos/{owner}/{repo}/forks", "GET /repos/{owner}/{repo}/git/matching-refs/{ref}", "GET /repos/{owner}/{repo}/hooks", "GET /repos/{owner}/{repo}/invitations", "GET /repos/{owner}/{repo}/issues", "GET /repos/{owner}/{repo}/issues/comments", "GET /repos/{owner}/{repo}/issues/comments/{comment_id}/reactions", "GET /repos/{owner}/{repo}/issues/events", "GET /repos/{owner}/{repo}/issues/{issue_number}/comments", "GET /repos/{owner}/{repo}/issues/{issue_number}/events", "GET /repos/{owner}/{repo}/issues/{issue_number}/labels", "GET /repos/{owner}/{repo}/issues/{issue_number}/reactions", "GET /repos/{owner}/{repo}/issues/{issue_number}/timeline", "GET /repos/{owner}/{repo}/keys", "GET /repos/{owner}/{repo}/labels", "GET /repos/{owner}/{repo}/milestones", "GET /repos/{owner}/{repo}/milestones/{milestone_number}/labels", "GET /repos/{owner}/{repo}/notifications", "GET /repos/{owner}/{repo}/pages/builds", "GET /repos/{owner}/{repo}/projects", "GET /repos/{owner}/{repo}/pulls", "GET /repos/{owner}/{repo}/pulls/comments", "GET /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions", "GET /repos/{owner}/{repo}/pulls/{pull_number}/comments", "GET /repos/{owner}/{repo}/pulls/{pull_number}/commits", "GET /repos/{owner}/{repo}/pulls/{pull_number}/files", "GET /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers", "GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews", "GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/comments", "GET /repos/{owner}/{repo}/releases", "GET /repos/{owner}/{repo}/releases/{release_id}/assets", "GET /repos/{owner}/{repo}/secret-scanning/alerts", "GET /repos/{owner}/{repo}/stargazers", "GET /repos/{owner}/{repo}/subscribers", "GET /repos/{owner}/{repo}/tags", "GET /repos/{owner}/{repo}/teams", "GET /repositories", "GET /repositories/{repository_id}/environments/{environment_name}/secrets", "GET /scim/v2/enterprises/{enterprise}/Groups", "GET /scim/v2/enterprises/{enterprise}/Users", "GET /scim/v2/organizations/{org}/Users", "GET /search/code", "GET /search/commits", "GET /search/issues", "GET /search/labels", "GET /search/repositories", "GET /search/topics", "GET /search/users", "GET /teams/{team_id}/discussions", "GET /teams/{team_id}/discussions/{discussion_number}/comments", "GET /teams/{team_id}/discussions/{discussion_number}/comments/{comment_number}/reactions", "GET /teams/{team_id}/discussions/{discussion_number}/reactions", "GET /teams/{team_id}/invitations", "GET /teams/{team_id}/members", "GET /teams/{team_id}/projects", "GET /teams/{team_id}/repos", "GET /teams/{team_id}/team-sync/group-mappings", "GET /teams/{team_id}/teams", "GET /user/blocks", "GET /user/emails", "GET /user/followers", "GET /user/following", "GET /user/gpg_keys", "GET /user/installations", "GET /user/installations/{installation_id}/repositories", "GET /user/issues", "GET /user/keys", "GET /user/marketplace_purchases", "GET /user/marketplace_purchases/stubbed", "GET /user/memberships/orgs", "GET /user/migrations", "GET /user/migrations/{migration_id}/repositories", "GET /user/orgs", "GET /user/public_emails", "GET /user/repos", "GET /user/repository_invitations", "GET /user/starred", "GET /user/subscriptions", "GET /user/teams", "GET /users", "GET /users/{username}/events", "GET /users/{username}/events/orgs/{org}", "GET /users/{username}/events/public", "GET /users/{username}/followers", "GET /users/{username}/following", "GET /users/{username}/gists", "GET /users/{username}/gpg_keys", "GET /users/{username}/keys", "GET /users/{username}/orgs", "GET /users/{username}/projects", "GET /users/{username}/received_events", "GET /users/{username}/received_events/public", "GET /users/{username}/repos", "GET /users/{username}/starred", "GET /users/{username}/subscriptions"];
+
+function isPaginatingEndpoint(arg) {
+  if (typeof arg === "string") {
+    return paginatingEndpoints.includes(arg);
+  } else {
+    return false;
+  }
+}
+
 /**
  * @param octokit Octokit instance
  * @param options Options passed to Octokit constructor
@@ -4497,7 +4515,10 @@ function paginateRest(octokit) {
 }
 paginateRest.VERSION = VERSION;
 
+exports.composePaginateRest = composePaginateRest;
+exports.isPaginatingEndpoint = isPaginatingEndpoint;
 exports.paginateRest = paginateRest;
+exports.paginatingEndpoints = paginatingEndpoints;
 //# sourceMappingURL=index.js.map
 
 
@@ -7540,11 +7561,13 @@ const { getAuthanticatedUrl } = __webpack_require__(918);
 module.exports = {createBranch, clone, push, areFilesChanged, getBranches};
 
 async function createBranch(branchName, git) {
+  core.info(`Creating branch ${branchName}.`);
   return await git
     .checkout(`-b${branchName}`);
 }
 
 async function clone(token, remote, dir, git) {
+  core.info(`Cloning ${remote}.`);
   await git.clone(getAuthanticatedUrl(token, remote), dir, {'--depth': 1});
 }
 
@@ -7554,7 +7577,8 @@ async function getBranches(git) {
 
 async function push(token, url, branchName, message, committerUsername, committerEmail, git) {
   if (core.isDebug()) __webpack_require__(231).enable('simple-git');
-
+  core.info('Pushing changes to remote');
+  
   await git.addConfig('user.name', committerUsername);
   await git.addConfig('user.email', committerEmail);
   await git.commit(message);
@@ -13281,7 +13305,7 @@ const { GitHub, getOctokitOptions } = __webpack_require__(30);
 
 const { createBranch, clone, push, areFilesChanged, getBranches } = __webpack_require__(374);
 const { getReposList, createPr } = __webpack_require__(119);
-const { getListOfFilesToReplicate, copyChangedFiles, getListOfReposToIgnore, getBranchName, isInit } = __webpack_require__(918);
+const { getListOfFilesToReplicate, copyChangedFiles, getListOfReposToIgnore, getBranchName, isInitialized } = __webpack_require__(918);
 
 const triggerEventName = process.env.GITHUB_EVENT_NAME;
 const eventPayload = require(process.env.GITHUB_EVENT_PATH);
@@ -13294,6 +13318,9 @@ async function run() {
   core.debug(JSON.stringify(eventPayload, null, 2));
 
   try {
+    /*
+     * 0. Setting up necessary variables and getting input specified by workflow user
+    */ 
     const gitHubKey = process.env.GITHUB_TOKEN || core.getInput('github_token', { required: true });
     const filesToIgnore = core.getInput('files_to_ignore', { required: true });
     const committerUsername = core.getInput('committer_username');
@@ -13308,68 +13335,76 @@ async function run() {
       previews: ['mercy-preview'],
     }));
 
-    /*
-     * Getting list of files that must be replicated in other repos by this action
-     */
-    //TODO for now this action is hardcoded to always get commit id of the first commit on the list
     //Id of commit can be taken only from push event, not workflow_dispatch
+    //TODO for now this action is hardcoded to always get commit id of the first commit on the list
     const commitId = triggerEventName === 'push' ? eventPayload.commits[0].id : '';
+    const branchName = getBranchName(commitId);
 
-    core.startGroup('Getting list of workflow files that need to be replicated in other repositories');
+    /*
+     * 1. Getting list of files that must be replicated in other repos by this action
+     */    
     const filesToReplicate = await getListOfFilesToReplicate(myOctokit, commitId, owner, repo, filesToIgnore, triggerEventName);
-
+    //if no files need replication, we just need to stop the workflow from further execution
     if (!filesToReplicate.length) 
-      return core.info('No changes to workflows were detected.');
-    
-    core.info(`Files that need replication are: ${filesToReplicate}.`);
-    core.endGroup();
+      return;
 
-    core.startGroup(`Getting list of all repositories owned by ${owner}`);
+    /*
+     * 2. Getting list of all repos owned by the owner/org
+     */
     const reposList = await getReposList(myOctokit, owner);
-    core.debug(`DEBUG: list of repositories for ${owner}:`);
-    core.debug(JSON.stringify(reposList, null, 2));
-    core.endGroup();
     
     /*
-     * Getting list of repos that should be ignored
+     * 3. Getting list of repos that should be ignored
      */
-    core.startGroup('Assembling list of repos to be ignored');
     const ignoredRepositories = getListOfReposToIgnore(repo, reposList, {
       reposToIgnore: core.getInput('repos_to_ignore'),
       topicsToInclude: core.getInput('topics_to_include'),
       excludePrivate: (core.getInput('exclude_private') === 'true'),
     });
 
-    core.info(`The following repositories will be ignored: ${ignoredRepositories}`);
-    core.endGroup();
-
+    /*
+     * 4. Replication of files in selected repos starts one by one
+     */
     for (const repo of reposList) {
       //start only if repo not on list of ignored
       if (!ignoredRepositories.includes(repo.name)) {        
         core.startGroup(`Started updating ${repo.name} repo`);
+
+        /*
+         * 4a. Creating folder where repo will be cloned and initializing git client
+         */
         const dir = path.join(process.cwd(), './clones', repo.name);
         await mkdir(dir, {recursive: true});
-
-        const branchName = getBranchName(commitId);
         const git = simpleGit({baseDir: dir});
 
-        core.info(`Cloning ${repo.name}.`);
-        await clone(gitHubKey, repo.url, dir, git);
-        
-        core.info('Checking if repo initialized and if is not then skip to next one');
-        if (!isInit(await getBranches(git), repo.defaultBranch)) continue;
+        /*
+         * 4b. Cloning and verification of the repo before replication
+         */
+        await clone(gitHubKey, repo.url, dir, git); 
+        if (!isInitialized(await getBranches(git), repo.defaultBranch)) continue;
 
-        core.info(`Creating branch ${branchName}.`);
+        /*
+         * 4c. Creating new branch in cloned repo
+         */
         await createBranch(branchName, git);
-        
-        core.info('Copying files');
+
+        /*
+         * 4d. Replicating files
+         */         
         await copyChangedFiles(filesToReplicate, dir);
         
         //pushing and creating PR only if there are changes detected locally
         if (await areFilesChanged(git)) {
-          core.info('Pushing changes to remote');
+          /*
+           * 4e. Pushing files to custom branch
+           */  
           await push(gitHubKey, repo.url, branchName, commitMessage, committerUsername, committerEmail, git);
+          
+          /*
+           * 4f. Opening a PR
+           */  
           const pullRequestUrl = await createPr(myOctokit, branchName, repo.id, commitMessage, repo.defaultBranch);
+          
           core.endGroup();
 
           if (pullRequestUrl) {
@@ -13378,7 +13413,8 @@ async function run() {
             core.info(`Unable to create a PR because of timeouts. Create PR manually from the branch ${  branchName} that was already created in the upstream`);
           }
         } else {
-          core.info('Workflow finished with success and no PR was created as no changes were detected');
+          core.endGroup();
+          core.info('Finished with success. No PR was created as no changes were detected');
         }
       }
     }
@@ -14396,7 +14432,7 @@ const path = __webpack_require__(622);
 const core = __webpack_require__(186);
 const { getCommitFiles } = __webpack_require__(119);
 
-module.exports = { copyChangedFiles, parseCommaList, getListOfReposToIgnore, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl, isInit };
+module.exports = { copyChangedFiles, parseCommaList, getListOfReposToIgnore, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl, isInitialized };
 
 /**
  * @param  {Object} octokit GitHub API client instance
@@ -14411,6 +14447,8 @@ module.exports = { copyChangedFiles, parseCommaList, getListOfReposToIgnore, get
 async function getListOfFilesToReplicate(octokit, commitId, owner, repo, filesToIgnore, triggerEventName) {
   let filesToCheckForReplication;
   const defaultWorkflowsDir = '.github/workflows';
+
+  core.startGroup('Getting list of workflow files that need to be replicated in other repositories');
 
   if (triggerEventName === 'push') {
     const commitFiles = await getCommitFiles(octokit, commitId, owner, repo);
@@ -14442,6 +14480,14 @@ async function getListOfFilesToReplicate(octokit, commitId, owner, repo, filesTo
     }
   }
 
+  if (!changedFiles.length) {
+    core.info('No changes to workflows were detected.');
+  } else {
+    core.info(`Files that need replication are: ${changedFiles}.`);
+  }
+
+  core.endGroup();
+
   return changedFiles;
 }
 
@@ -14462,6 +14508,8 @@ function getListOfReposToIgnore(repo, reposList, inputs) {
     topicsToInclude,
     excludePrivate,
   } = inputs;
+
+  core.startGroup('Getting list of repos to be ignored');
 
   //manually ignored repositories.
   const ignoredRepositories = reposToIgnore ? parseCommaList(reposToIgnore) : [];
@@ -14485,6 +14533,14 @@ function getListOfReposToIgnore(repo, reposList, inputs) {
     ignoredRepositories.push(...privateRepositories(reposList));
   }
 
+  if (!ignoredRepositories.length) {
+    core.info('No repositories will be ignored.');
+  } else {
+    core.info(`Repositories that will be ignored: ${ignoredRepositories}.`);
+  }
+
+  core.endGroup();
+
   return ignoredRepositories;
 }
 
@@ -14493,6 +14549,7 @@ function getListOfReposToIgnore(repo, reposList, inputs) {
  * @param  {String} destination where file should be copied
  */
 async function copyChangedFiles(filesList, destination) {
+  core.info('Copying files');
   await Promise.all(filesList.map(async filepath => {
     return await copy(path.join(process.cwd(), filepath), path.join(destination, filepath));
   }));
@@ -14536,7 +14593,8 @@ function getAuthanticatedUrl(token, url) {
  * @param  {String} defaultBranch name of default branch that is always set even if repo not initialized
  * @returns  {Boolean}
  */
-function isInit(branches, defaultBranch) {
+function isInitialized(branches, defaultBranch) {
+  core.info('Checking if repo initialized. If not, then it must be ignoreds');
   core.debug(`DEBUG: list of local branches: ${branches.branches}`);
   return !!branches.branches[defaultBranch];
 }
