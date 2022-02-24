@@ -1692,7 +1692,7 @@ module.exports = require("os");
 
 const core = __webpack_require__(186);
 
-module.exports = { getCommitFiles, getReposList, createPr };
+module.exports = { getCommitFiles, getReposList, createPr, getRepo };
 
 async function getCommitFiles(octokit, commitId, owner, repo) {
   const { data: { files } } = await octokit.repos.getCommit({
@@ -1702,6 +1702,25 @@ async function getCommitFiles(octokit, commitId, owner, repo) {
   });
 
   return files;
+}
+
+async function getRepo(octokit, owner, repo) {
+  core.info(`Getting details of manually selected ${repo} repository`);
+
+  const response = await octokit.repos.get({
+    owner,
+    repo
+  });
+
+  return { 
+    name: response.name,
+    url: response.html_url,
+    id: response.node_id,
+    defaultBranch: response.default_branch,
+    private: response.private,
+    archived: response.archived,
+    topics: response.topics,
+  };
 }
 
 async function getReposList(octokit, owner) {
@@ -13304,7 +13323,7 @@ const { retry } = __webpack_require__(298);
 const { GitHub, getOctokitOptions } = __webpack_require__(30);
 
 const { createBranch, clone, push, areFilesChanged, getBranches } = __webpack_require__(374);
-const { getReposList, createPr } = __webpack_require__(119);
+const { getReposList, createPr, getRepo } = __webpack_require__(119);
 const { getListOfFilesToReplicate, copyChangedFiles, getListOfReposToIgnore, getBranchName, isInitialized } = __webpack_require__(918);
 
 const triggerEventName = process.env.GITHUB_EVENT_NAME;
@@ -13312,7 +13331,9 @@ const eventPayload = require(process.env.GITHUB_EVENT_PATH);
 
 /* eslint-disable sonarjs/cognitive-complexity */
 async function run() {
-  if (triggerEventName !== 'push' && triggerEventName !== 'workflow_dispatch') return core.setFailed('This GitHub Action works only when triggered by "push" or "workflow_dispatch" webhooks.');
+  const isPush = triggerEventName === 'push';
+  const isWorkflowDispatch = triggerEventName === 'workflow_dispatch';
+  if (!isPush && !isWorkflowDispatch) return core.setFailed('This GitHub Action works only when triggered by "push" or "workflow_dispatch" webhooks.');
   
   core.debug('DEBUG: full payload of the event that triggered the action:');
   core.debug(JSON.stringify(eventPayload, null, 2));
@@ -13326,6 +13347,7 @@ async function run() {
     const committerUsername = core.getInput('committer_username');
     const committerEmail = core.getInput('committer_email');
     const commitMessage = core.getInput('commit_message');
+    const repoNameManual = core.getInput('repo_name');
 
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
 
@@ -13349,10 +13371,16 @@ async function run() {
       return;
 
     /*
-     * 2. Getting list of all repos owned by the owner/org
+     * 2. Getting list of all repos owned by the owner/org 
+     *    or just replicating to the one provided manually
      */
-    const reposList = await getReposList(myOctokit, owner);
-    
+    let reposList = [];
+    if (isWorkflowDispatch && repoNameManual) {
+      reposList.push(getRepo(myOctokit, owner, repoNameManual));
+    } else {
+      reposList = await getReposList(myOctokit, owner);
+    }
+
     /*
      * 3. Getting list of repos that should be ignored
      */
