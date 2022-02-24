@@ -13382,7 +13382,10 @@ async function run() {
          * 4b. Cloning and verification of the repo before replication
          */
           await clone(gitHubKey, repo.url, dir, git); 
-          if (!isInitialized(await getBranches(git), repo.defaultBranch)) continue;
+          if (!isInitialized(await getBranches(git), repo.defaultBranch)) {
+            core.info('Repo not initialized, skipping it.');
+            continue;
+          }
 
           /*
          * 4c. Creating new branch in cloned repo
@@ -14600,8 +14603,10 @@ function getAuthanticatedUrl(token, url) {
  * @returns  {Boolean}
  */
 function isInitialized(branches, defaultBranch) {
-  core.info('Checking if repo initialized. If not, then it must be ignoreds');
-  core.debug(`DEBUG: list of local branches: ${branches.branches}`);
+  core.info('Checking if repo initialized.');
+  core.debug('DEBUG: list of local branches'); 
+  core.debug(JSON.stringify(branches.branches, null, 2));
+
   return !!branches.branches[defaultBranch];
 }
 
