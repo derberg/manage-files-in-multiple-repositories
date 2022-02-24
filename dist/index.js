@@ -1718,6 +1718,7 @@ async function getRepo(octokit, owner, repo) {
     id: data.node_id,
     defaultBranch: data.default_branch,
     private: data.private,
+    fork: data.fork,
     archived: data.archived,
     topics: data.topics,
   };
@@ -1781,6 +1782,7 @@ async function getReposList(octokit, owner) {
       id: repo.node_id,
       defaultBranch: repo.default_branch,
       private: repo.private,
+      fork: repo.fork,
       archived: repo.archived,
       topics: repo.topics,
     };
