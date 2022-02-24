@@ -48,6 +48,11 @@ inputs:
       Boolean value on whether to exclude private repositories from this action.
     default: false
     required: false
+  exclude_forked:
+    description: >
+      Boolean value on whether to exclude forked repositories from this action.
+    default: false
+    required: false
 runs:
   using: node12
   main: dist/index.js

@@ -13398,6 +13398,7 @@ async function run() {
       reposToIgnore: core.getInput('repos_to_ignore'),
       topicsToInclude: core.getInput('topics_to_include'),
       excludePrivate: (core.getInput('exclude_private') === 'true'),
+      excludeForked: (core.getInput('exclude_forked') === 'true'),
     });
 
     /*
@@ -14546,6 +14547,7 @@ async function getListOfFilesToReplicate(octokit, commitId, owner, repo, filesTo
  * @param  {String} inputs.reposToIgnore A comma separated list of repositories to ignore.
  * @param  {String} inputs.topicsToInclude A comma separated list of topics to include.
  * @param  {Boolean} inputs.excludePrivate Exclude private repositories.
+ * @param  {Boolean} inputs.excludeForked Exclude forked repositories.
  * 
  * @returns  {Array}
  */
@@ -14554,6 +14556,7 @@ function getListOfReposToIgnore(repo, reposList, inputs) {
     reposToIgnore,
     topicsToInclude,
     excludePrivate,
+    excludeForked,
   } = inputs;
 
   core.startGroup('Getting list of repos to be ignored');
@@ -14578,6 +14581,11 @@ function getListOfReposToIgnore(repo, reposList, inputs) {
   // Exclude private repositories.
   if (excludePrivate === true) {
     ignoredRepositories.push(...privateRepositories(reposList));
+  }
+
+  // Exclude forked repositories
+  if (excludeForked === true) {
+    ignoredRepositories.push(...forkedRepositories(reposList));
   }
 
   if (!ignoredRepositories.length) {
@@ -14687,6 +14695,18 @@ function archivedRepositories(reposList) {
 function privateRepositories(reposList) {
   return reposList.filter(repo => {
     return repo.private === true;
+  }).map(reposList => reposList.name);
+}
+
+/**
+ * Returns a list of forked repositories.
+ * 
+ * @param  {Array} reposList All the repositories.
+ * @returns {Array}
+ */
+function forkedRepositories(reposList) {
+  return reposList.filter(repo => {
+    return repo.fork === true;
   }).map(reposList => reposList.name);
 }
 
