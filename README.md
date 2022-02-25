@@ -65,6 +65,7 @@ repos_to_ignore | Comma-separated list of repositories that should not get updat
 topics_to_include | Comma-separated list of topics that should get updates from this action. Repos that do not contain one of the specified topics will get appended to the repos_to_ignore list. In the format `topic1,topic2`. | false | -
 exclude_private | Boolean value on whether to exclude private repositories from this action. | false | false
 exclude_forked | Boolean value on whether to exclude forked repositories from this action. | false | false
+branches | By default, action creates branch from default branch and opens PR only against default branch. With this property you can override this behaviour. You can provide a comma-separated list of branches this action shoudl work against. You can also provide regex, but without comma as list of branches is split in code by comma. | false | default branch is used
 
 ## Examples
 
@@ -120,6 +121,7 @@ jobs:
                 topics_to_include: topic1,topic2
                 exclude_private: true
                 exclude_forked: true
+                branches: main,next,'/[A-I]/g'
                 committer_username: santiago-bernabeu
                 committer_email: my-email@me.com
                 commit_message: "ci: update global workflows"
