@@ -7616,6 +7616,7 @@ async function createBranch(branchName, git) {
 async function clone(token, remote, dir, git) {
   core.info(`Cloning ${remote}.`);
   await git.clone(getAuthanticatedUrl(token, remote), dir, {'--depth': 1});
+  await git.fetch(['-all']);
 }
 
 async function getBranchesLocal(git) {
@@ -14717,23 +14718,9 @@ function filterOutMissingBranches(branchesRequested, branchesExisting, defaultBr
     // return branchesArray.includes(branch.name);
     return branchesArray.some(b => {
       const regex = new RegExp(b);
-      console.log(regex);
-      console.log(regex.test(branch.name));
       return regex.test(branch.name);
     });
   });
-
-/*
-  return branchesArray.filter(branch => {
-    // return branchesArray.includes(branch.name);
-    return branchesExisting.some(b => {
-      const regex = new RegExp(b);
-      console.log(regex);
-      console.log(regex.test(branch));
-      return regex.test(branch);
-    });
-  });
-*/
 }
 
 /**
