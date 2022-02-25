@@ -1712,6 +1712,9 @@ async function getBranchesRemote(octokit, owner, repo) {
     repo
   });
 
+  core.debug('DEBUG: Full response about branches');
+  core.debug(JSON.stringify(response, null, 2));
+
   const branchesList = response.map((branch) => {
     return { 
       name: branch.name,
