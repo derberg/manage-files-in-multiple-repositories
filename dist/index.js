@@ -7616,6 +7616,8 @@ async function createBranch(branchName, git) {
 async function clone(token, remote, dir, git) {
   core.info(`Cloning ${remote}.`);
   await git.clone(getAuthanticatedUrl(token, remote), dir, {'--depth': 1});
+
+  if (core.isDebug()) __webpack_require__(231).enable('simple-git');
   core.info('Fetching all.');
   await git.fetch({'--all': null});
 }
