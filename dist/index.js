@@ -6452,6 +6452,8 @@ const parsers = [
     })
 ];
 function parseFetchResult(stdOut, stdErr) {
+    console.log('makarena', stdOut)
+    console.log('makarena2', stdErr)
     const result = {
         raw: stdOut,
         remote: null,
@@ -7993,17 +7995,14 @@ exports.parseStringResponse = parseStringResponse;
 
 const core = __webpack_require__(186);
 const { getAuthanticatedUrl } = __webpack_require__(918);
+const REMOTE = 'auth';
 
 module.exports = {createBranch, clone, push, areFilesChanged, getBranchesLocal, checkoutBranch};
 
 async function checkoutBranch(branchName, git) {
-  if (core.isDebug()) __webpack_require__(231).enable('simple-git');
-  core.info('Fetching all.');
-  await git.fetch(['--all', '-v', '--progress', '--force']);
-  
   core.info(`Checking out branch ${branchName}.`);
-  return await git
-    .checkout(`${branchName}`);
+  await git.fetch(REMOTE, branchName);
+  await git.checkout(`${branchName}`);
 }
 
 async function createBranch(branchName, git) {
@@ -8014,22 +8013,23 @@ async function createBranch(branchName, git) {
 
 async function clone(token, remote, dir, git) {
   core.info(`Cloning ${remote}.`);
-  await git.clone(getAuthanticatedUrl(token, remote), dir, {'--depth': 1});
+  const remoteWithToken = getAuthanticatedUrl(token, remote);
+  await git.clone(remoteWithToken, dir, {'--depth': 1});
+  await git.addRemote(REMOTE, remoteWithToken);
 }
 
 async function getBranchesLocal(git) {
   return await git.branchLocal();
 }
 
-async function push(token, url, branchName, message, committerUsername, committerEmail, git) {
+async function push(branchName, message, committerUsername, committerEmail, git) {
   if (core.isDebug()) __webpack_require__(231).enable('simple-git');
   core.info('Pushing changes to remote');
   
   await git.addConfig('user.name', committerUsername);
   await git.addConfig('user.email', committerEmail);
   await git.commit(message);
-  await git.addRemote('auth', getAuthanticatedUrl(token, url));
-  await git.push(['-u', 'auth', branchName]);
+  await git.push(['-u', REMOTE, branchName]);
 }
 
 async function areFilesChanged(git) {
@@ -14396,7 +14396,7 @@ async function run() {
               /*
                * 4ed. Pushing files to custom branch
                */  
-              await push(gitHubKey, repo.url, newBranchName, commitMessage, committerUsername, committerEmail, git);
+              await push(newBranchName, commitMessage, committerUsername, committerEmail, git);
                     
               /*
                * 4fe. Opening a PR
@@ -14442,8 +14442,10 @@ exports.fetchTask = void 0;
 const parse_fetch_1 = __webpack_require__(254);
 function fetchTask(remote, branch, customArgs) {
     const commands = ['fetch', ...customArgs];
+    console.log('dupa', commands, remote, branch)
     if (remote && branch) {
         commands.push(remote, branch);
+
     }
     return {
         commands,
