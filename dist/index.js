@@ -2068,7 +2068,7 @@ async function getReposList(octokit, owner) {
 
 async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
   const createPrMutation =
-    `mutation createPr($branchName: String!, $id: String!, $commitMessage: String!, $defaultBranch: String!) {
+    `mutation createPr($branchName: String!, $id: ID!, $commitMessage: String!, $defaultBranch: String!) {
       createPullRequest(input: {
         baseRefName: $defaultBranch,
         headRefName: $branchName,
