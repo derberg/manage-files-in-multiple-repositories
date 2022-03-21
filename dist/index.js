@@ -8014,7 +8014,7 @@ async function clone(token, remote, dir, git) {
 
   if (core.isDebug()) __webpack_require__(231).enable('simple-git');
   core.info('Fetching all.');
-  await git.fetch(['--all', '-v']);
+  await git.fetch(['--all', '-v', '--progress', '--force']);
 }
 
 async function getBranchesLocal(git) {
