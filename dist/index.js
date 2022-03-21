@@ -7616,7 +7616,7 @@ async function createBranch(branchName, git) {
 async function clone(token, remote, dir, git) {
   core.info(`Cloning ${remote}.`);
   await git.clone(getAuthanticatedUrl(token, remote), dir, {'--depth': 1});
-  await git.fetch(['--all']);
+  await git.fetch(['--all', '-v']);
 }
 
 async function getBranchesLocal(git) {
@@ -13455,7 +13455,7 @@ async function run() {
            */
           const branchesToOperateOn = await getBranchesList(myOctokit, owner, repo.name, branches, defaultBranch); 
           if (!branchesToOperateOn.length) {
-            core.info('Repo has no branches that it action could operate on');
+            core.info('Repo has no branches that the action could operate on');
             continue;
           }
 
@@ -14686,9 +14686,6 @@ function getBranchName(commitId, branchName) {
 async function getBranchesList(octokit, owner, repo, branchesString, defaultBranch) {
   core.info('Getting list of branches the action should operate on');
   const branchesFromRemote = await getBranchesRemote(octokit, owner, repo);
-
-  core.debug('DEBUG: list of branches from remote'); 
-  core.debug(JSON.stringify(branchesFromRemote, null, 2));
 
   //we need to match if all branches that user wants this action to support are on the server and can actually be supported
   //branches not available an remote will not be included
