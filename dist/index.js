@@ -7619,7 +7619,7 @@ async function clone(token, remote, dir, git) {
 
   if (core.isDebug()) __webpack_require__(231).enable('simple-git');
   core.info('Fetching all.');
-  await git.fetch({'--all': null});
+  await git.fetch(['--all', '-v']);
 }
 
 async function getBranchesLocal(git) {
