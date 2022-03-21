@@ -7997,6 +7997,10 @@ const { getAuthanticatedUrl } = __webpack_require__(918);
 module.exports = {createBranch, clone, push, areFilesChanged, getBranchesLocal, checkoutBranch};
 
 async function checkoutBranch(branchName, git) {
+  if (core.isDebug()) __webpack_require__(231).enable('simple-git');
+  core.info('Fetching all.');
+  await git.fetch(['--all', '-v', '--progress', '--force']);
+  
   core.info(`Checking out branch ${branchName}.`);
   return await git
     .checkout(`${branchName}`);
@@ -8011,10 +8015,6 @@ async function createBranch(branchName, git) {
 async function clone(token, remote, dir, git) {
   core.info(`Cloning ${remote}.`);
   await git.clone(getAuthanticatedUrl(token, remote), dir, {'--depth': 1});
-
-  if (core.isDebug()) __webpack_require__(231).enable('simple-git');
-  core.info('Fetching all.');
-  await git.fetch(['--all', '-v', '--progress', '--force']);
 }
 
 async function getBranchesLocal(git) {
