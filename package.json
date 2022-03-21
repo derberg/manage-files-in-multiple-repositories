@@ -11,7 +11,7 @@
     "gen-readme-toc": "markdown-toc -i README.md",
     "lint": "eslint --max-warnings 0 .",
     "lint-fix": "eslint --fix .",
-    "test": "jest"
+    "test": "npm run lint && jest"
   },
   "pre-commit": [
     "package",

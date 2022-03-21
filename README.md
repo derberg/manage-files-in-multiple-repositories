@@ -121,7 +121,7 @@ jobs:
                 topics_to_include: topic1,topic2
                 exclude_private: true
                 exclude_forked: true
-                branches: main,next,'/[A-I]/g'
+                branches: .*-release,main
                 committer_username: santiago-bernabeu
                 committer_email: my-email@me.com
                 commit_message: "ci: update global workflows"
