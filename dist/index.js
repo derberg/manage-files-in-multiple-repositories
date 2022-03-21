@@ -6452,8 +6452,6 @@ const parsers = [
     })
 ];
 function parseFetchResult(stdOut, stdErr) {
-    console.log('makarena', stdOut)
-    console.log('makarena2', stdErr)
     const result = {
         raw: stdOut,
         remote: null,
@@ -14378,12 +14376,13 @@ async function run() {
             /*
              * 4da. Checkout branch in cloned repo
              */
-            await checkoutBranch(branch.name, git);
+            const branchName = branch.name;
+            await checkoutBranch(branchName, git);
 
             /*
              * 4db. Creating new branch in cloned repo
              */
-            const newBranchName = getBranchName(commitId, branch.name);
+            const newBranchName = getBranchName(commitId, branchName);
             await createBranch(newBranchName, git);
 
             /*
@@ -14401,7 +14400,7 @@ async function run() {
               /*
                * 4fe. Opening a PR
                */  
-              const pullRequestUrl = await createPr(myOctokit, newBranchName, repo.id, commitMessage, defaultBranch);
+              const pullRequestUrl = await createPr(myOctokit, newBranchName, repo.id, commitMessage, branchName);
                     
               core.endGroup();
           
@@ -14442,10 +14441,8 @@ exports.fetchTask = void 0;
 const parse_fetch_1 = __webpack_require__(254);
 function fetchTask(remote, branch, customArgs) {
     const commands = ['fetch', ...customArgs];
-    console.log('dupa', commands, remote, branch)
     if (remote && branch) {
         commands.push(remote, branch);
-
     }
     return {
         commands,
