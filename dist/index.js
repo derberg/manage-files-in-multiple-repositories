@@ -14291,6 +14291,7 @@ async function run() {
     const committerEmail = core.getInput('committer_email');
     const commitMessage = core.getInput('commit_message');
     const branches = core.getInput('branches');
+    const destination = core.getInput('destination');
     const repoNameManual = eventPayload.inputs && eventPayload.inputs.repo_name;
 
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
@@ -14389,7 +14390,7 @@ async function run() {
             /*
              * 4dc. Replicating files
              */         
-            await copyChangedFiles(filesToReplicate, dir);
+            await copyChangedFiles(filesToReplicate, dir, destination);
                   
             //pushing and creating PR only if there are changes detected locally
             if (await areFilesChanged(git)) {
@@ -15521,7 +15522,7 @@ const path = __webpack_require__(622);
 const core = __webpack_require__(186);
 const { getCommitFiles, getBranchesRemote } = __webpack_require__(119);
 
-module.exports = { copyChangedFiles, parseCommaList, getListOfReposToIgnore, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl, isInitialized, getBranchesList, filterOutMissingBranches, filterOutFiles, getFilteredFilesList };
+module.exports = { copyChangedFiles, parseCommaList, getListOfReposToIgnore, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl, isInitialized, getBranchesList, filterOutMissingBranches, filterOutFiles, getFilteredFilesList, getFileName };
 
 /**
  * @param  {Object} octokit GitHub API client instance
@@ -15666,13 +15667,25 @@ function getListOfReposToIgnore(repo, reposList, inputs) {
 
 /**
  * @param  {Array} filesList list of files that need to be copied
- * @param  {String} destination where file should be copied
+ * @param  {String} root root destination in the repo, always ./
+ * @param  {String} destination in case files need to be copied to soom custom location in repo
  */
-async function copyChangedFiles(filesList, destination) {
+async function copyChangedFiles(filesList, root, destination) {
   core.info('Copying files');
-  await Promise.all(filesList.map(async filepath => {
-    return await copy(path.join(process.cwd(), filepath), path.join(destination, filepath));
+
+  await Promise.all(filesList.map(async filePath => {
+    return destination 
+      ? await copy(path.join(process.cwd(), filePath), path.join(root, destination, getFileName(filePath)))
+      : await copy(path.join(process.cwd(), filePath), path.join(root, filePath));
   }));
+}
+
+/**
+ * @param  {String} filePath full filepath to the file
+ * @returns  {String} filename with extension
+ */
+function getFileName(filePath) {
+  return filePath.split('/').slice(-1)[0];
 }
 
 /**

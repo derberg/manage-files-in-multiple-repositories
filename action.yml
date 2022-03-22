@@ -1,5 +1,5 @@
-name: Global Workflows Support
-description: This action introduces support for global workflows.
+name: Copy Files to Other Repositories
+description: This action enables you to copy/replicate from one repo to another automatically.
 inputs:
   github_token:
     description: >
@@ -63,6 +63,10 @@ inputs:
       By default, action creates branch from default branch and opens PR only against default branch.
       With this property you can override this behaviour. You can provide a comma-separated list of branches this action shoudl work agains.
       You can also provide regex, but without comma as list of branches is split in code by comma.
+    required: false
+  destination:
+    description: >
+      Name of the directory where all files matching "patterns_to_include" will be copied. In the format `.github/workflows`.
     required: false
 runs:
   using: node12
