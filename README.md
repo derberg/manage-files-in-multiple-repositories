@@ -1,7 +1,9 @@
-# Global Workflows Support
-GitHub Action that introduces support for global workflows. Global workflows are the ones that you update in just one repo, and then they are automatically updated in other repositories in your organization or user account.
+# Copy Files to Other Repositories
 
-> Action is released under **v0.2.0**, and I plan to extend it forward, add tests and release under **v1** once I get other people using it. Feel free to create an issue about it.
+GitHub Action that enables you to keep a file in `Repository A` and copy it over to `Repository N`.
+It is useful wor use cases like:
+- you have a GitHub Actions workflow files that are the same for every repo and you want to edit it only once and then see change in all the other repositories
+- you have a `CODE_OF_CONDUCT.md` or `CONTRIBUTING.md` file that you want to have in the same form in all the repositories. You want to edit it in one repo and then have the change replicated in other repositories
 
 <!-- toc -->
 
@@ -10,25 +12,25 @@ GitHub Action that introduces support for global workflows. Global workflows are
 - [Action Flow](#action-flow)
 - [Configuration](#configuration)
 - [Examples](#examples)
-  * [Minimum Workflow](#minimum-workflow)
+  * [Minimum Workflow to Support Only Workflows Replication](#minimum-workflow-to-support-only-workflows-replication)
   * [Advanced Workflow](#advanced-workflow)
+  * [Super Advanced Workflow](#super-advanced-workflow)
 - [Development](#development)
-- [Known Limitations/Hardcodes](#known-limitationshardcodes)
 - [Debug](#debug)
 
 <!-- tocstop -->
 
 ## Why I Created This Action?
 
-It seems like GitHub is [not going](https://github.community/t/plans-to-support-global-workflows-in-github-repository/17899) to support global workflows anytime soon. I decided to create this action as I was just super tired of manually editing the same workflow files in over 30 repositories. To be honest, I never did it; I never did it manually and could not imagine I do it :smiley:
+In [AsyncAPI](https://www.asyncapi.com/) we have over 50 repositories. We use GitHub Actions at scale. Many workflows are exactly the same. We keep all workflows in [.github](https://docs.github.com/en/free-pro-team@latest/github/building-a-strong-community/creating-a-default-community-health-file). This action replicates all changes to workflows to all the other repos.
 
-Maybe GitHub will support global workflows someday. Take it into account and put global workflows in a repository called `.github` because once GitHub starts supporting global workflows, they will surely have to be located there. Read more about `.github` repository [here](https://docs.github.com/en/free-pro-team@latest/github/building-a-strong-community/creating-a-default-community-health-file).
+Use case mentione above was first. Then more folks started using this action. So this action evolved to support any file replication, not only workflows.
 
 ## Supported Event Triggers
 
 This action can be triggered by:
 - **push** event and only files that were changed in the commit are replicated to other repositories.
-- **workflow_dispatch** event and then all files from workflow directory (except of ignored ones) are replicated to other repositories. Use case for this event is when you create new repositories in your organization that need to get global workflows. Then you can manually trigger the action and all global workflows will be updated in all repositories. Below screen shots shows how manual triggering works.
+- **workflow_dispatch** event and then all files from workflow directory (except of ignored ones) are replicated to other repositories. Use case for this event is when you create new repositories in your organization that need to push standard files to it. Then you can manually trigger the action and all files will be updated in all repositories. Below screen shots shows how manual triggering works.
 
   <img src="workflow_dispatch.jpg" alt="flow diagram" width="40%">
 
@@ -57,7 +59,8 @@ This action can be triggered by:
 Name | Description | Required | Default
 --|------|--|--
 github_token | Token to use GitHub API. It must have "repo" and "workflow" scopes so it can push to repo and edit workflows. It cannot be the default GitHub Actions token GITHUB_TOKEN. GitHub Action token's permissions are limited to the repository that contains your workflows. Provide token of the user who has the right to push to the repos that this action is supposed to update. The same token is used for pulling repositories - important to know for those that want to use this action with private repositories. | true | -
-files_to_ignore | Comma-separated list of workflow files that should be ignored by this action and not updated in other repositories. You must provide here at least the name of the workflow file that uses this action. In the format `file.yml,another_file.yml`. | true | -
+patterns_to_ignore | Comma-separated list of file paths or directories that should be handled by this action and updated in other repositories. This option is useful if you use "patterns_to_include" with large amount of files, and some of them you want to ignore. In the format `./github/workflows/another_file.yml`. Internally it is handled by standard JavaScript `includes` function. | true | -
+patterns_to_include | Comma-separated list of file paths or directories that should be handled by this action and updated in other repositories. In the format `.github/workflows`.  Internally it is handled by standard JavaScript `includes` function. | true | -
 committer_username | The username (not display name) of the committer will be used to commit changes in the workflow file in a specific repository. In the format `web-flow`. | false | `web-flow`
 committer_email | The committer's email that will be used in the commit of changes in the workflow file in a specific repository. In the format `noreply@github.com`.| false | `noreply@github.com`
 commit_message | It is used as a commit message when pushing changes with global workflows. It is also used as a title of the pull request that is created by this action. | false | `Update global workflows`
@@ -66,10 +69,11 @@ topics_to_include | Comma-separated list of topics that should get updates from 
 exclude_private | Boolean value on whether to exclude private repositories from this action. | false | false
 exclude_forked | Boolean value on whether to exclude forked repositories from this action. | false | false
 branches | By default, action creates branch from default branch and opens PR only against default branch. With this property you can override this behaviour. You can provide a comma-separated list of branches this action shoudl work against. You can also provide regex, but without comma as list of branches is split in code by comma. | false | default branch is used
+destination | Name of the directory where all files matching "patterns_to_include" will be copied. In the format `.github/workflows`. | false | -
 
 ## Examples
 
-### Minimum Workflow
+### Minimum Workflow to Support Only Workflows Replication
 
 ```yml
 name: Global workflow to rule them all
@@ -90,7 +94,10 @@ jobs:
       - uses: derberg/global-workflows-support@v0.7.0
         with:
           github_token: ${{ secrets.CUSTOM_TOKEN }}
-          files_to_ignore: name_of_file_where_this_action_is_used.yml
+          #you must specify what pattern to include otherwise all files from the repository will be replicated 
+          patterns_to_include: '.github/workflows'
+          #must have, so the workflow do not copy this workflow file to all other repos. It should be only in one, main, .github repo
+          patterns_to_ignore: '.github/workflows/name_of_file_where_this_action_is_used.yml'
 ```
 
 ### Advanced Workflow
@@ -116,7 +123,8 @@ jobs:
               uses: derberg/global-workflows-support@v0.7.0
               with:
                 github_token: ${{ secrets.CUSTOM_TOKEN }}
-                files_to_ignore: name_of_file_where_this_action_is_used.yml
+                patterns_to_ignore: '.github/workflows/name_of_file_where_this_action_is_used.yml'
+                patterns_to_include: '.github/workflows'
                 repos_to_ignore: repo1,repo2
                 topics_to_include: topic1,topic2
                 exclude_private: true
@@ -168,6 +176,109 @@ jobs:
               MERGE_RETRY_SLEEP: "10000"
     ```
 
+### Super Advanced Workflow
+
+```yml
+name: Global workflow to rule them all
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/**'
+      - 'CODE_OF_CONDUCT.md'
+      - 'CONTRIBUTING.md'
+  workflow_dispatch:
+    inputs:
+      repo_name:
+        description: |
+          You can specify name of the repository where workflows should be pushed manually. As long as repository is not ignored by workflow settings.
+          If you do not specify exact repository name, the workflow will try to replicate all missing changes to all repositories.
+        required: false
+
+jobs:
+
+  replicate_coc:
+      name: Replicate Code of Conduct in all repositories
+      runs-on: ubuntu-latest
+      steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Replicating file
+        uses: derberg/global-workflows-support@v1.0.0
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          patterns_to_include: CODE_OF_CONDUCT.md
+          committer_username: asyncapi-bot
+          committer_email: info@asyncapi.io
+          commit_message: "chore: update code of conduct"
+          repos_to_ignore: shape-up-process,glee-hello-world
+
+  replicate_contributing:
+      name: Replicate CONTRIBUTING guide to all repositories
+      runs-on: ubuntu-latest
+      steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Replicating file
+        uses: derberg/global-workflows-support@v1.0.0
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          patterns_to_include: CONTRIBUTING.md
+          repos_to_ignore: shape-up-process,glee-hello-world,spec,community
+          committer_username: asyncapi-bot
+          committer_email: info@asyncapi.io
+          commit_message: "ci: update global contribution guide"
+
+  replicate_go_workflows:
+      name: Replicate workflows for Go projects
+      runs-on: ubuntu-latest
+      steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Replicating file
+        uses: derberg/global-workflows-support@v1.0.0
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          patterns_to_include: .github/workflows/if-go-pr-testing.yml
+          topics_to_include: golang
+          committer_username: asyncapi-bot
+          committer_email: info@asyncapi.io
+          commit_message: "ci: update workflows for go projects"
+
+  replicate_nodejs_workflows:
+      name: Replicate workflows for Nodejs projects
+      runs-on: ubuntu-latest
+      steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Replicating file
+        uses: derberg/global-workflows-support@v1.0.0
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          patterns_to_include: .github/workflows/if-nodejs-pr-testing.yml,.github/workflows/if-nodejs-release.yml,.github/workflows/if-nodejs-version-bump.yml,.github/workflows/bump.yml
+          topics_to_include: nodejs
+          committer_username: asyncapi-bot
+          committer_email: info@asyncapi.io
+          commit_message: "ci: update workflows for nodejs projects"
+      
+  replicate_generic_workflows:
+      name: Replicate generic workflows needed for any project
+      runs-on: ubuntu-latest
+      steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Replicating file
+        uses: derberg/global-workflows-support@v1.0.0
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          patterns_to_include: .github/workflows/automerge-for-humans-add-ready-to-merge-or-do-not-merge-label.yml,.github/workflows/add-good-first-issue-labels.yml,.github/workflows/automerge-for-humans-merging.yml,.github/workflows/automerge-for-humans-remove-ready-to-merge-label-on-edit.yml,.github/workflows/automerge-orphans.yml,.github/workflows/automerge.yml,.github/workflows/autoupdate.yml,.github/workflows/help-command.yml,.github/workflows/issues-prs-notifications.yml,.github/workflows/lint-pr-title.yml,.github/workflows/notify-tsc-members-mention.yml,.github/workflows/sentiment-analysis.yml,.github/workflows/stale-issues-prs.yml,.github/workflows/welcome-first-time-contrib.yml,.github/workflows/release-announcements.yml,
+          committer_username: asyncapi-bot
+          committer_email: info@asyncapi.io
+          commit_message: "ci: update generic workflows"
+          repos_to_ignore: shape-up-process,glee-hello-world
+```
+
 ## Development
 
 ```bash
@@ -177,12 +288,6 @@ jobs:
 # GITHUB_EVENT_NAME is the name of the event that triggers the event
 GITHUB_TOKEN=token GITHUB_EVENT_NAME=push GITHUB_EVENT_PATH="../test/fake-event.json" GITHUB_REPOSITORY="lukasz-lab/.github" npm start
 ```
-
-## Known Limitations/Hardcodes
-
-* Action looks for file changes only in `.github/workflows` because it intends to support only global workflows and not any files. This is, of course something that can be changed. Please create an issue to discuss this change further.
-* Action assumes that when triggered by **push** event, it has information only about one commit. It is very common for many projects and organizations to merge only of single commit or merging and squashing commits into one. If you see a need to support multiple commits on a **push** event, please open an issue and describe your use case and expected behavior.
-* Action requires you to provide `files_to_ignore` as you need to remember to put there the name of the workflow file where you use this action. Yes, you need to manually provide the file's name as I [did not find](https://github.community/t/how-can-i-get-the-name-of-the-workflow-file-of-the-workflow-that-was-triggered/145216) a nice way how, in the workflow, I can access information about the name of the workflow file. The only idea I have, which is not the best and requires some additional effort, is to read `GITHUB_WORKFLOW` variable and then read the workflow files' contents to match the name. I hope you have something better.
 
 ## Debug
 

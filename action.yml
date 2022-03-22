@@ -1,5 +1,5 @@
-name: Global Workflows Support
-description: This action introduces support for global workflows.
+name: Copy Files to Other Repositories
+description: This action enables you to copy/replicate from one repo to another automatically.
 inputs:
   github_token:
     description: >
@@ -25,12 +25,17 @@ inputs:
       It is also used as a title of the pull request that is created by this action.
     default: Update global workflows
     required: false
-  files_to_ignore:
+  patterns_to_ignore:
     description: >
-      Comma-separated list of workflow files that should be ignored by this action and not updated in other repositories.
-      You must provide here at least the name of the workflow file that uses this action.
-      In the format `file.yml,another_file.yml`.
+      Comma-separated list of file paths or directories that should be handled by this action and updated in other repositories.
+      This option is useful if you use "patterns_to_include" with large amount of files, and some of them you want to ignore.
+      In the format `./github/workflows/another_file.yml`.
     required: true
+  patterns_to_include:
+    description: >
+      Comma-separated list of file paths or directories that should be handled by this action and updated in other repositories.
+      In the format `.github/workflows`.
+    required: true  
   repos_to_ignore:
     description: >
       Comma-separated list of repositories that should not get updates from this action.
@@ -58,6 +63,10 @@ inputs:
       By default, action creates branch from default branch and opens PR only against default branch.
       With this property you can override this behaviour. You can provide a comma-separated list of branches this action shoudl work agains.
       You can also provide regex, but without comma as list of branches is split in code by comma.
+    required: false
+  destination:
+    description: >
+      Name of the directory where all files matching "patterns_to_include" will be copied. In the format `.github/workflows`.
     required: false
 runs:
   using: node12
