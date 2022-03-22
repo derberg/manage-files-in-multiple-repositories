@@ -14285,7 +14285,8 @@ async function run() {
      * 0. Setting up necessary variables and getting input specified by workflow user
     */ 
     const gitHubKey = process.env.GITHUB_TOKEN || core.getInput('github_token', { required: true });
-    const filesToIgnore = core.getInput('files_to_ignore', { required: true });
+    const patternsToIgnore = core.getInput('patterns_to_ignore');
+    const patternsToInclude = core.getInput('patterns_to_include');
     const committerUsername = core.getInput('committer_username');
     const committerEmail = core.getInput('committer_email');
     const commitMessage = core.getInput('commit_message');
@@ -14307,7 +14308,7 @@ async function run() {
     /*
      * 1. Getting list of files that must be replicated in other repos by this action
      */    
-    const filesToReplicate = await getListOfFilesToReplicate(myOctokit, commitId, owner, repo, filesToIgnore, triggerEventName);
+    const filesToReplicate = await getListOfFilesToReplicate(myOctokit, commitId, owner, repo, patternsToIgnore, patternsToInclude, triggerEventName);
     //if no files need replication, we just need to stop the workflow from further execution
     if (!filesToReplicate.length) 
       return;
@@ -15520,65 +15521,89 @@ const path = __webpack_require__(622);
 const core = __webpack_require__(186);
 const { getCommitFiles, getBranchesRemote } = __webpack_require__(119);
 
-module.exports = { copyChangedFiles, parseCommaList, getListOfReposToIgnore, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl, isInitialized, getBranchesList, filterOutMissingBranches };
+module.exports = { copyChangedFiles, parseCommaList, getListOfReposToIgnore, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl, isInitialized, getBranchesList, filterOutMissingBranches, filterOutFiles, getFilteredFilesList };
 
 /**
  * @param  {Object} octokit GitHub API client instance
  * @param  {Object} commitId Id of the commit to check for files changes
  * @param  {String} owner org or user name
  * @param  {String} repo repo name
- * @param  {String} filesToIgnore comma-separated list of files that should be ignored
+ * @param  {String} patternsToIgnore comma-separated list of file paths or directories that should be ignored
+ * @param  {String} patternsToInclude comma-separated list of file paths or directories that should be replicated
  * @param  {String} triggerEventName name of the event that triggered the workflow
  * 
  * @returns {Array<String>} list of filepaths of modified files
  */
-async function getListOfFilesToReplicate(octokit, commitId, owner, repo, filesToIgnore, triggerEventName) {
+async function getListOfFilesToReplicate(octokit, commitId, owner, repo, patternsToIgnore, patternsToInclude, triggerEventName) {
   let filesToCheckForReplication;
-  const defaultWorkflowsDir = '.github/workflows';
 
   core.startGroup('Getting list of workflow files that need to be replicated in other repositories');
 
   if (triggerEventName === 'push') {
     const commitFiles = await getCommitFiles(octokit, commitId, owner, repo);
     filesToCheckForReplication = commitFiles.map((el) => el.filename);
-    core.debug(`DEBUG: list of commited files for commit ${commitId} that is used to check if there was any file located in .github/workflows modified: ${filesToCheckForReplication}`);
+    core.debug(`DEBUG: list of files modified in commit ${commitId}: ${filesToCheckForReplication}`);
   }
 
   if (triggerEventName === 'workflow_dispatch') {
-    const workflowDirPath = path.join(process.cwd(), defaultWorkflowsDir);
-    const workflowDirFilesList = await readdir(workflowDirPath);
-    filesToCheckForReplication = workflowDirFilesList.map(filename => path.join(defaultWorkflowsDir, filename));
-    core.debug(`DEBUG: list of files from ${workflowDirPath} directory is ${filesToCheckForReplication}`);
+    const root = process.cwd();
+    const allFiles = await readdir(root);
+    filesToCheckForReplication = allFiles.map(filename => path.join(root, filename));
+    core.debug(`DEBUG: list of files from the repo is ${filesToCheckForReplication}`);
   }
 
-  const changedFiles = [];
-  const ignoreFilesList = filesToIgnore ? parseCommaList(filesToIgnore) : [];
-  
-  core.info(`List of files that should be ignored: ${ignoreFilesList}`);
+  const filesForReplication = getFilteredFilesList(filesToCheckForReplication, patternsToIgnore, patternsToInclude);
 
-  for (const filename of filesToCheckForReplication) {
-    const onlyFileName = filename.split('/').slice(-1)[0];
-    const isFileIgnored = !!ignoreFilesList.map(file => file === onlyFileName).filter(Boolean).length;
-    //TODO for now this action is hardcoded to only monitor changes from .github/workflows directory because it is supposed to support global workflows and no other files
-    const isWorkflowFile = filename.includes(defaultWorkflowsDir);
-    core.info(`Checking if ${filename} is located in workflows directory (${isWorkflowFile}) and if ${onlyFileName} should be ignored (${isFileIgnored})`);
-
-    if (isWorkflowFile && !isFileIgnored) {
-      changedFiles.push(filename);
-    }
-  }
-
-  if (!changedFiles.length) {
-    core.info('No changes to workflows were detected.');
+  if (!filesForReplication.length) {
+    core.info('No changes were detected.');
   } else {
-    core.info(`Files that need replication are: ${changedFiles}.`);
+    core.info(`Files that need replication are: ${filesForReplication}.`);
   }
 
   core.endGroup();
 
-  return changedFiles;
+  return filesForReplication;
 }
 
+/**
+ * Get a list of files to replicate
+ * 
+ * @param  {Array} filesToCheckForReplication list of all paths that are suppose to be replicated
+ * @param  {String} filesToIgnore Comma-separated list of file paths or directories to ignore
+ * @param  {String} patternsToInclude Comma-separated list of file paths or directories to include
+ *
+* @returns  {Array}
+ */
+function getFilteredFilesList(filesToCheckForReplication, filesToIgnore, patternsToInclude) {
+  const filesWithoutIgnored = filterOutFiles(filesToCheckForReplication, filesToIgnore, true);
+  return filterOutFiles(filesWithoutIgnored, patternsToInclude, false);
+}
+
+/**
+ * Get list of files that should be replicated because they are supposed to be ignored, or because they should not be ignored
+ * 
+ * @param  {Array} filesToFilter list of all paths that are suppose to be replicated
+ * @param  {String} patterns Comma-separated list of file paths or directories
+ * @param  {Boolean} ignore true means files that matching patters should be filtered out, false means that only matching patterns should stay
+ *
+* @returns  {Array}
+ */
+function filterOutFiles(filesToFilter, patterns, ignore) {
+  const filteredList = [];
+  const includePatternsList = patterns ? parseCommaList(patterns) : [];
+
+  for (const filename of filesToFilter) {
+    const isMatching = !!includePatternsList.map(pattern => {
+      return filename.includes(pattern);
+    }).filter(Boolean).length;
+    
+    if (!ignore && isMatching) filteredList.push(filename);
+    if (ignore && !isMatching) filteredList.push(filename);
+  }
+
+  return filteredList;
+}
+ 
 /**
  * Assemble a list of repositories that should be ignored.
  * 
