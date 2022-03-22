@@ -34,7 +34,7 @@ inputs:
   patterns_to_include:
     description: >
       Comma-separated list of file paths or directories that should be handled by this action and updated in other repositories.
-      In the format `file.yml,.github/workflows`.
+      In the format `.github/workflows`.
     required: true  
   repos_to_ignore:
     description: >
