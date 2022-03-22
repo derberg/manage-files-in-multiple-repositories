@@ -15672,6 +15672,7 @@ function getListOfReposToIgnore(repo, reposList, inputs) {
  */
 async function copyChangedFiles(filesList, root, destination) {
   core.info('Copying files');
+  core.debug(`DEBUG: Copying files to root ${ root } and destination ${ destination } - if provided (${ !!destination }). Where process.cwd() is ${ process.cwd() }`);
 
   await Promise.all(filesList.map(async filePath => {
     return destination 
