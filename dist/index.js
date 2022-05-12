@@ -8010,7 +8010,7 @@ async function createBranch(branchName, git) {
 }
 
 async function clone(token, remote, dir, git) {
-  core.info(`Cloning ${remote}.`);
+  core.info(`Cloning ${remote}`);
   const remoteWithToken = getAuthanticatedUrl(token, remote);
   await git.clone(remoteWithToken, dir, {'--depth': 1});
   await git.addRemote(REMOTE, remoteWithToken);
@@ -8039,6 +8039,7 @@ async function areFilesChanged(git) {
   return status.files.length > 0;
 }
   
+
 
 /***/ }),
 
@@ -15740,7 +15741,7 @@ async function getBranchesList(octokit, owner, repo, branchesString, defaultBran
 function filterOutMissingBranches(branchesRequested, branchesExisting, defaultBranch) {
   const branchesArray = branchesRequested
     ? parseCommaList(branchesRequested)
-    : [defaultBranch];
+    : [`^${defaultBranch}$`];
 
   core.info(`These were requested branches: ${branchesRequested}`);
   core.info(`This is default branch: ${defaultBranch}`);
