@@ -19349,7 +19349,6 @@ const { readdir, stat } = __webpack_require__(747).promises;
 const path = __webpack_require__(622);
 const core = __webpack_require__(186);
 const { getCommitFiles, getBranchesRemote } = __webpack_require__(119);
-const { relative } = __webpack_require__(622);
 
 module.exports = { copyChangedFiles, parseCommaList, getListOfReposToIgnore, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl, isInitialized, getBranchesList, filterOutMissingBranches, filterOutFiles, getFilteredFilesList, getFileName };
 
@@ -19377,7 +19376,7 @@ async function getListOfFilesToReplicate(octokit, commitId, owner, repo, pattern
 
   if (triggerEventName === 'workflow_dispatch') {
     const root = process.cwd();
-    filesToCheckForReplication = (await getFilesListRecursively(root)).map(filepath => relative(root, filepath));
+    filesToCheckForReplication = (await getFilesListRecursively(root)).map(filepath => path.relative(root, filepath));
     core.debug(`DEBUG: list of files from the repo is ${filesToCheckForReplication}`);
   }
 
