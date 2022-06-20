@@ -19394,17 +19394,17 @@ async function getListOfFilesToReplicate(octokit, commitId, owner, repo, pattern
 }
 
 /**
- * Get a list of all files recursively from root path
+ * Get a list of all files recursively in file path
  * 
- * @param {String} path 
+ * @param {String} filepath 
  * 
  * @returns {Array<String>} list of filepaths in path directory
  */
-async function getFilesListRecursively(path) {
-  const paths = await readdir(path);
+async function getFilesListRecursively(filepath) {
+  const paths = await readdir(filepath);
 
   const fullpaths = paths.map(async filename => {
-    const fullpath = path.join(path, filename);
+    const fullpath = path.join(filepath, filename);
     const stats = await stat(fullpath);
 
     if (stats.isFile()) {
