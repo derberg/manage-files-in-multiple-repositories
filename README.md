@@ -1,7 +1,7 @@
 # Copy Files to Other Repositories
 
 GitHub Action that enables you to keep a file in `Repository A` and copy it over to `Repository N`.
-It is useful wor use cases like:
+It is useful for use cases like:
 - you have a GitHub Actions workflow files that are the same for every repo and you want to edit it only once and then see change in all the other repositories
 - you have a `CODE_OF_CONDUCT.md` or `CONTRIBUTING.md` file that you want to have in the same form in all the repositories. You want to edit it in one repo and then have the change replicated in other repositories
 
