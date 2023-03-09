@@ -14418,8 +14418,8 @@ async function run() {
              * it is not possible that both ifs are invoked in the same run
              */         
             if (filesToReplicate) await copyChangedFiles(filesToReplicate, dir, destination);
-            if (filesToRemove) await removeFiles(filesToRemove, dir);
-            if (!filesToReplicate) await removeFiles(patternsToRemove, dir, patternsToIgnore);
+            if (filesToRemove) await removeFiles(filesToRemove, dir, { destination });
+            if (!filesToReplicate) await removeFiles(patternsToRemove, dir, { patternsToIgnore });
                   
             //pushing and creating PR only if there are changes detected locally
             if (await areFilesChanged(git)) {
@@ -15743,9 +15743,13 @@ async function copyChangedFiles(filesList, root, destination) {
 /**
  * @param  {Array|String} toRemove comma-separated list of patterns that specify where and what should be removed or array of files to remove
  * @param  {String} root root of cloned repo
+ * @param  {Object}options
+ * {String} patternsToIgnore comma-separated list of file paths or directories that should be ignored
+ * {String} destination in case files need to be removed from soom custom location in repo
  */
-async function removeFiles(toRemove, root, patternsToIgnore) {
+async function removeFiles(toRemove, root, { patternsToIgnore, destination }) {
   let filesForRemoval;
+
   const isListString = typeof toRemove === 'string';
   core.info('Removing files');
   if (!isListString) core.debug(`DEBUG: Removing to the following files: ${filesForRemoval}`);
@@ -15761,7 +15765,9 @@ async function removeFiles(toRemove, root, patternsToIgnore) {
   }
 
   await Promise.all(filesForRemoval.map(async filePath => {
-    return await remove(path.join(root, filePath));
+    return await remove(destination ?
+      path.join(root, destination, getFileName(filePath)) :
+      path.join(root, filePath));
   }));
 }
 
