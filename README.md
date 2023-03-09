@@ -6,6 +6,10 @@ It is useful for use cases like:
 - you have a `CODE_OF_CONDUCT.md` or `CONTRIBUTING.md` file that you want to have in the same form in all the repositories. You want to edit it in one repo and then have the change replicated in other repositories
 - you have a file that has to be removed from multiple repositories
 
+## Some breaking changes
+
+If you used `Copy Files to Other Repositories` action before it became `Manage Files in Multiple Repositories` the only breaking change that you need to be aware of, except new features, is that now this action is also able to pick up deletions. In other words, imagine a situation where `patterns_to_include` has value `./github/workflows/another_file.yml`. The new version of action not only will pick up modifications of `another_file.yml` but also if you remove that file, this action will pick that info up and also remove the file in other repositories that have it, respecting `destination` field.
+
 <!-- toc -->
 
 - [Why I Created This Action?](#why-i-created-this-action)
@@ -62,7 +66,7 @@ Name | Description | Required | Default
 github_token | Token to use GitHub API. It must have "repo" and "workflow" scopes so it can push to repo and edit workflows. It cannot be the default GitHub Actions token GITHUB_TOKEN. GitHub Action token's permissions are limited to the repository that contains your workflows. Provide token of the user who has the right to push to the repos that this action is supposed to update. The same token is used for pulling repositories - important to know for those that want to use this action with private repositories. | true | -
 patterns_to_ignore | Comma-separated list of file paths or directories that should be handled by this action and updated in other repositories. This option is useful if you use "patterns_to_include" or "patterns_to_remove" with large amount of files, and some of them you want to ignore. In the format `./github/workflows/another_file.yml`. Internally it is handled by standard JavaScript `includes` function. | true | -
 patterns_to_remove | Comma-separated list of file paths or directories that should be handled by this action and removed from other repositories. This option do not perform any removal of files that are located in repository there this action is used. This option cannot be used at the same time with "patterns_to_include", these fields are mutually exclusive. In the format `./github/workflows`. | true | -
-patterns_to_include | Comma-separated list of file paths or directories that should be handled by this action and copied or updated in other repositories. This option cannot be used at the same time with "patterns_to_remove", these fields are mutually exclusive. In the format `.github/workflows`. Internally it is handled by standard JavaScript `includes` function. | true | -
+patterns_to_include | Comma-separated list of file paths or directories that should be handled by this action and copied or updated or removed in other repositories. Now this option is self aware not only of creation and modification but also deletion of file that match the pattern. This option cannot be used at the same time with "patterns_to_remove", these fields are mutually exclusive. In the format `.github/workflows`. Internally it is handled by standard JavaScript `includes` function. | true | -
 committer_username | The username (not display name) of the committer will be used to commit changes in the workflow file in a specific repository. In the format `web-flow`. | false | `web-flow`
 committer_email | The committer's email that will be used in the commit of changes in the workflow file in a specific repository. In the format `noreply@github.com`.| false | `noreply@github.com`
 commit_message | It is used as a commit message when pushing changes with global workflows. It is also used as a title of the pull request that is created by this action. | false | `Update global workflows`
