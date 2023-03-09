@@ -79,6 +79,40 @@ destination | Name of the directory where all files matching "patterns_to_includ
 
 ## Examples
 
+### Minimum Workflow to Remove a File from Other Repos
+
+Below workflow will remove `LICENSE` file from all repos in organization. The repo where this workflow runs, does not need to have `LICENSE` file. 
+
+> of course you should never remove licenses from repos :smiley:
+
+```yml
+name: I want to remove LICENSE file
+
+on:
+  push:
+    branches: [ master ] #or main
+  workflow_dispatch: {} #to enable manual triggering of the action
+
+jobs:
+
+  removal:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: derberg/manage-files-in-multiple-repositories@v2
+        with:
+          github_token: ${{ secrets.CUSTOM_TOKEN }}
+          #you must specify what pattern to include otherwise all files from the repository will be replicated 
+          patterns_to_remove: 'LICENSE'
+          #must have, so the workflow do not copy this workflow file to all other repos. It should be only in one, main, .github repo
+          patterns_to_ignore: '.github/workflows/name_of_file_where_this_action_is_used.yml'
+          committer_username: santiago-bernabeu
+          committer_email: my-email@me.com
+          commit_message: "ci: removal of license files"
+```
+
 ### Minimum Workflow to Support Only Workflows Replication
 
 ```yml
@@ -96,8 +130,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: derberg/copy-files-to-other-repositories@v1.0.0
+      - uses: actions/checkout@v3
+      - uses: derberg/manage-files-in-multiple-repositories@v2
         with:
           github_token: ${{ secrets.CUSTOM_TOKEN }}
           #you must specify what pattern to include otherwise all files from the repository will be replicated 
@@ -124,9 +158,9 @@ jobs:
 
           steps:
             - name: Checkout repository
-              uses: actions/checkout@v2
+              uses: actions/checkout@v3
             - name: Replicating global workflow
-              uses: derberg/copy-files-to-other-repositories@v1.0.0
+              uses: derberg/manage-files-in-multiple-repositories@v2
               with:
                 github_token: ${{ secrets.CUSTOM_TOKEN }}
                 patterns_to_ignore: '.github/workflows/name_of_file_where_this_action_is_used.yml'
@@ -209,9 +243,9 @@ jobs:
       runs-on: ubuntu-latest
       steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Replicating file
-        uses: derberg/copy-files-to-other-repositories@v1.0.0
+        uses: derberg/manage-files-in-multiple-repositories@v2
         with:
           github_token: ${{ secrets.GH_TOKEN }}
           patterns_to_include: CODE_OF_CONDUCT.md
@@ -225,9 +259,9 @@ jobs:
       runs-on: ubuntu-latest
       steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Replicating file
-        uses: derberg/copy-files-to-other-repositories@v1.0.0
+        uses: derberg/manage-files-in-multiple-repositories@v2
         with:
           github_token: ${{ secrets.GH_TOKEN }}
           patterns_to_include: CONTRIBUTING.md
@@ -241,9 +275,9 @@ jobs:
       runs-on: ubuntu-latest
       steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Replicating file
-        uses: derberg/copy-files-to-other-repositories@v1.0.0
+        uses: derberg/manage-files-in-multiple-repositories@v2
         with:
           github_token: ${{ secrets.GH_TOKEN }}
           patterns_to_include: .github/workflows/if-go-pr-testing.yml
@@ -257,9 +291,9 @@ jobs:
       runs-on: ubuntu-latest
       steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Replicating file
-        uses: derberg/copy-files-to-other-repositories@v1.0.0
+        uses: derberg/manage-files-in-multiple-repositories@v2
         with:
           github_token: ${{ secrets.GH_TOKEN }}
           patterns_to_include: .github/workflows/if-nodejs-pr-testing.yml,.github/workflows/if-nodejs-release.yml,.github/workflows/if-nodejs-version-bump.yml,.github/workflows/bump.yml
@@ -273,9 +307,9 @@ jobs:
       runs-on: ubuntu-latest
       steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Replicating file
-        uses: derberg/copy-files-to-other-repositories@v1.0.0
+        uses: derberg/manage-files-in-multiple-repositories@v2
         with:
           github_token: ${{ secrets.GH_TOKEN }}
           patterns_to_include: .github/workflows/automerge-for-humans-add-ready-to-merge-or-do-not-merge-label.yml,.github/workflows/add-good-first-issue-labels.yml,.github/workflows/automerge-for-humans-merging.yml,.github/workflows/automerge-for-humans-remove-ready-to-merge-label-on-edit.yml,.github/workflows/automerge-orphans.yml,.github/workflows/automerge.yml,.github/workflows/autoupdate.yml,.github/workflows/help-command.yml,.github/workflows/issues-prs-notifications.yml,.github/workflows/lint-pr-title.yml,.github/workflows/notify-tsc-members-mention.yml,.github/workflows/sentiment-analysis.yml,.github/workflows/stale-issues-prs.yml,.github/workflows/welcome-first-time-contrib.yml,.github/workflows/release-announcements.yml,
