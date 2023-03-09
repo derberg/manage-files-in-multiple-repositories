@@ -14314,8 +14314,10 @@ async function run() {
     //TODO for now this action is hardcoded to always get commit id of the first commit on the list
     const commitId = triggerEventName === 'push' ? eventPayload.commits[0].id : '';
 
-    if (patternsToRemove && patternsToInclude) 
+    if (patternsToRemove && patternsToInclude) {
       core.setFailed('Fields patterns_to_include and patterns_to_remove are mutually exclusive. If you want to remove files from repos then do not use patterns_to_include.');
+      return;
+    }
 
     if (patternsToRemove && destination) 
       core.warning('The destination field will be ignored as it doesn\'t make sense when removal is expected and patterns_to_remove field is used');
