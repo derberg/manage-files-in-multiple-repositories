@@ -1964,7 +1964,6 @@ async function getBranchesRemote(octokit, owner, repo) {
     (response) => response.data
   );
 
-
   core.debug('DEBUG: Full response about branches');
   core.debug(JSON.stringify(allBranches, null, 2));
 
@@ -14323,16 +14322,22 @@ async function run() {
       core.warning('The destination field will be ignored as it doesn\'t make sense when removal is expected and patterns_to_remove field is used');
 
     /*
-     * 1. Getting list of files that must be replicated in other repos
+     * 1. Getting list of files that have changes that must be replicated in other repos
      * If `patterns_to_remove` field is used then this step is ommited as there is no need to search for files to replicate as no replication takes place but removal
      */
+    let filesToCheckForReplication;
     let filesToReplicate;
+    let filesToRemove;
     if (!patternsToRemove) {
-      filesToReplicate = await getListOfFilesToReplicate(myOctokit, commitId, owner, repo, patternsToIgnore, patternsToInclude, triggerEventName);
+      filesToCheckForReplication = await getListOfFilesToReplicate(myOctokit, commitId, owner, repo, patternsToIgnore, patternsToInclude, triggerEventName);
+      filesToReplicate = filesToCheckForReplication.filesForReplication;
+      filesToRemove = filesToCheckForReplication.filesForRemoval;
       //if no files need replication, we just need to stop the workflow from further execution
-      if (!filesToReplicate.length) 
+      if (!filesToReplicate.length && !filesToRemove.length) 
         return;
     } 
+    //filesForReplication
+    //filesThatNeedToBeRemoved
 
     /*
      * 2. Getting list of all repos owned by the owner/org 
@@ -14413,6 +14418,7 @@ async function run() {
              * it is not possible that both ifs are invoked in the same run
              */         
             if (filesToReplicate) await copyChangedFiles(filesToReplicate, dir, destination);
+            if (filesToRemove) await removeFiles(filesToRemove, dir);
             if (!filesToReplicate) await removeFiles(patternsToRemove, dir, patternsToIgnore);
                   
             //pushing and creating PR only if there are changes detected locally
@@ -15545,7 +15551,7 @@ const path = __webpack_require__(622);
 const core = __webpack_require__(186);
 const { getCommitFiles, getBranchesRemote } = __webpack_require__(119);
 
-module.exports = { copyChangedFiles, parseCommaList, getListOfReposToIgnore, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl, isInitialized, getBranchesList, filterOutMissingBranches, filterOutFiles, getFilteredFilesList, getFileName, removeFiles };
+module.exports = { copyChangedFiles, parseCommaList, getListOfReposToIgnore, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl, isInitialized, getBranchesList, filterOutMissingBranches, filterOutFiles, getFilteredFilesList, getFileName, removeFiles, getFiles };
 
 /**
  * @param  {Object} octokit GitHub API client instance
@@ -15556,10 +15562,11 @@ module.exports = { copyChangedFiles, parseCommaList, getListOfReposToIgnore, get
  * @param  {String} patternsToInclude comma-separated list of file paths or directories that should be replicated
  * @param  {String} triggerEventName name of the event that triggered the workflow
  * 
- * @returns {Array<String>} list of filepaths of modified files
+ * @returns {Object<Array<String>>} list of filepaths of modified files
  */
 async function getListOfFilesToReplicate(octokit, commitId, owner, repo, patternsToIgnore, patternsToInclude, triggerEventName) {
   let filesToCheckForReplication;
+  let filesToCheckForRemoval;
 
   core.startGroup('Getting list of workflow files that need to be replicated in other repositories');
 
@@ -15567,16 +15574,20 @@ async function getListOfFilesToReplicate(octokit, commitId, owner, repo, pattern
     const commitFiles = await getCommitFiles(octokit, commitId, owner, repo);
     core.debug(`DEBUG: list of files modified in commit ${commitId}. Full response from API:`);
     core.debug(JSON.stringify(commitFiles, null, 2));
-    filesToCheckForReplication = commitFiles.map((el) => el.filename);
-    core.debug(`DEBUG: list of files modified in commit ${commitId}: ${filesToCheckForReplication}`);
+    //filtering out files that show in commit as removed
+    filesToCheckForReplication = getFiles(commitFiles, false);
+    //remember files that show in commit as removed
+    filesToCheckForRemoval = getFiles(commitFiles, true);
   }
 
   if (triggerEventName === 'workflow_dispatch') {
     const root = process.cwd();
     filesToCheckForReplication = (await getFilesListRecursively(root)).map(filepath => path.relative(root, filepath));
+    filesToCheckForRemoval = [];
     core.debug(`DEBUG: list of files from the repo is ${filesToCheckForReplication}`);
   }
-
+  
+  const filesForRemoval = getFilteredFilesList(filesToCheckForRemoval, patternsToIgnore, patternsToInclude);
   const filesForReplication = getFilteredFilesList(filesToCheckForReplication, patternsToIgnore, patternsToInclude);
 
   if (!filesForReplication.length) {
@@ -15587,7 +15598,7 @@ async function getListOfFilesToReplicate(octokit, commitId, owner, repo, pattern
 
   core.endGroup();
 
-  return filesForReplication;
+  return { filesForReplication, filesForRemoval };
 }
 
 /**
@@ -15730,17 +15741,23 @@ async function copyChangedFiles(filesList, root, destination) {
 }
 
 /**
- * @param  {String} patternsToRemove comma-separated list of patterns that specify where and what should be removed
+ * @param  {Array|String} toRemove comma-separated list of patterns that specify where and what should be removed or array of files to remove
  * @param  {String} root root of cloned repo
  */
-async function removeFiles(patternsToRemove, root, patternsToIgnore) {
+async function removeFiles(toRemove, root, patternsToIgnore) {
+  let filesForRemoval;
+  const isListString = typeof toRemove === 'string';
   core.info('Removing files');
   core.debug(`DEBUG: Removing files from root ${root} Where process.cwd() is ${process.cwd()}`);
 
-  const filesToCheckForRemoval = (await getFilesListRecursively(root)).map(filepath => path.relative(root, filepath));
-  const filesForRemoval = getFilteredFilesList(filesToCheckForRemoval, patternsToIgnore, patternsToRemove);
-
-  core.debug(`DEBUG: Provided patterns ${patternsToRemove} relate to the following files: ${filesForRemoval}`);
+  if (isListString) {
+    const filesToCheckForRemoval = (await getFilesListRecursively(root)).map(filepath => path.relative(root, filepath));
+    filesForRemoval = getFilteredFilesList(filesToCheckForRemoval, patternsToIgnore, toRemove);
+  
+    core.debug(`DEBUG: Provided patterns ${toRemove} relate to the following files: ${filesForRemoval}`);
+  } else {
+    filesForRemoval = toRemove;
+  }
 
   await Promise.all(filesForRemoval.map(async filePath => {
     return await remove(path.join(root, filePath));
@@ -15900,6 +15917,19 @@ function forkedRepositories(reposList) {
   return reposList.filter(repo => {
     return repo.fork === true;
   }).map(reposList => reposList.name);
+}
+
+/**
+ * Returns a list of files that were removed or not
+ * 
+ * @param  {Array} filesList All the files objects.
+ * @param  {Boolean} removed should return removed or not removed
+ * @returns {Array}
+ */
+function getFiles(filesList, removed) {
+  return filesList
+    .filter(fileObj => removed ? fileObj.status === 'removed' : fileObj.status !== 'removed')
+    .map(nonRemovedFile => nonRemovedFile.filename);
 }
 
 /***/ }),
