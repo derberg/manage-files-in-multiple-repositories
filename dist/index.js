@@ -15565,6 +15565,7 @@ async function getListOfFilesToReplicate(octokit, commitId, owner, repo, pattern
 
   if (triggerEventName === 'push') {
     const commitFiles = await getCommitFiles(octokit, commitId, owner, repo);
+    core.debug(`DEBUG: list of files modified in commit ${commitId} full response from API: ${filesToCheckForReplication}`);
     filesToCheckForReplication = commitFiles.map((el) => el.filename);
     core.debug(`DEBUG: list of files modified in commit ${commitId}: ${filesToCheckForReplication}`);
   }
@@ -15738,7 +15739,7 @@ async function removeFiles(patternsToRemove, root, patternsToIgnore) {
   const filesToCheckForRemoval = (await getFilesListRecursively(root)).map(filepath => path.relative(root, filepath));
   const filesForRemoval = getFilteredFilesList(filesToCheckForRemoval, patternsToIgnore, patternsToRemove);
 
-  core.debug(`DEBUG: Provided patterns ${patternsToRemove} relate to the following files ${filesForRemoval}`);
+  core.debug(`DEBUG: Provided patterns ${patternsToRemove} relate to the following files: ${filesForRemoval}`);
 
   await Promise.all(filesForRemoval.map(async filePath => {
     return await remove(path.join(root, filePath));
