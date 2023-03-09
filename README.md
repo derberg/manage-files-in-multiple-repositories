@@ -1,9 +1,10 @@
-# Copy Files to Other Repositories
+# Manage Files in Multiple Repositories
 
-GitHub Action that enables you to keep a file in `Repository A` and copy it over to `Repository N`.
+GitHub Action that enables you to keep a file in `Repository A` and copy it over, update or remove it from `Repository N`.
 It is useful for use cases like:
 - you have a GitHub Actions workflow files that are the same for every repo and you want to edit it only once and then see change in all the other repositories
 - you have a `CODE_OF_CONDUCT.md` or `CONTRIBUTING.md` file that you want to have in the same form in all the repositories. You want to edit it in one repo and then have the change replicated in other repositories
+- you have a file that has to be removed from multiple repositories
 
 <!-- toc -->
 
@@ -24,7 +25,7 @@ It is useful for use cases like:
 
 In [AsyncAPI](https://www.asyncapi.com/) we have over 50 repositories. We use GitHub Actions at scale. Many workflows are exactly the same. We keep all workflows in [.github](https://docs.github.com/en/free-pro-team@latest/github/building-a-strong-community/creating-a-default-community-health-file). This action replicates all changes to workflows to all the other repos.
 
-Use case mentione above was first. Then more folks started using this action. So this action evolved to support any file replication, not only workflows.
+Use case mentione above was first. Then more folks started using this action. So this action evolved to support any file modifications, not only workflows.
 
 ## Supported Event Triggers
 
@@ -59,8 +60,9 @@ This action can be triggered by:
 Name | Description | Required | Default
 --|------|--|--
 github_token | Token to use GitHub API. It must have "repo" and "workflow" scopes so it can push to repo and edit workflows. It cannot be the default GitHub Actions token GITHUB_TOKEN. GitHub Action token's permissions are limited to the repository that contains your workflows. Provide token of the user who has the right to push to the repos that this action is supposed to update. The same token is used for pulling repositories - important to know for those that want to use this action with private repositories. | true | -
-patterns_to_ignore | Comma-separated list of file paths or directories that should be handled by this action and updated in other repositories. This option is useful if you use "patterns_to_include" with large amount of files, and some of them you want to ignore. In the format `./github/workflows/another_file.yml`. Internally it is handled by standard JavaScript `includes` function. | true | -
-patterns_to_include | Comma-separated list of file paths or directories that should be handled by this action and updated in other repositories. In the format `.github/workflows`.  Internally it is handled by standard JavaScript `includes` function. | true | -
+patterns_to_ignore | Comma-separated list of file paths or directories that should be handled by this action and updated in other repositories. This option is useful if you use "patterns_to_include" or "patterns_to_remove" with large amount of files, and some of them you want to ignore. In the format `./github/workflows/another_file.yml`. Internally it is handled by standard JavaScript `includes` function. | true | -
+patterns_to_remove | Comma-separated list of file paths or directories that should be handled by this action and removed from other repositories. This option do not perform any removal of files that are located in repository there this action is used. This option cannot be used at the same time with "patterns_to_include", these fields are mutually exclusive. In the format `./github/workflows`. | true | -
+patterns_to_include | Comma-separated list of file paths or directories that should be handled by this action and copied or updated in other repositories. This option cannot be used at the same time with "patterns_to_remove", these fields are mutually exclusive. In the format `.github/workflows`. Internally it is handled by standard JavaScript `includes` function. | true | -
 committer_username | The username (not display name) of the committer will be used to commit changes in the workflow file in a specific repository. In the format `web-flow`. | false | `web-flow`
 committer_email | The committer's email that will be used in the commit of changes in the workflow file in a specific repository. In the format `noreply@github.com`.| false | `noreply@github.com`
 commit_message | It is used as a commit message when pushing changes with global workflows. It is also used as a title of the pull request that is created by this action. | false | `Update global workflows`
@@ -69,7 +71,7 @@ topics_to_include | Comma-separated list of topics that should get updates from 
 exclude_private | Boolean value on whether to exclude private repositories from this action. | false | false
 exclude_forked | Boolean value on whether to exclude forked repositories from this action. | false | false
 branches | By default, action creates branch from default branch and opens PR only against default branch. With this property you can override this behaviour. You can provide a comma-separated list of branches this action shoudl work against. You can also provide regex, but without comma as list of branches is split in code by comma. | false | default branch is used
-destination | Name of the directory where all files matching "patterns_to_include" will be copied. In the format `.github/workflows`. | false | -
+destination | Name of the directory where all files matching "patterns_to_include" will be copied. It doesn't work with "patterns_to_remove". In the format `.github/workflows`. | false | -
 
 ## Examples
 
