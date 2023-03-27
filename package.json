@@ -1,7 +1,7 @@
 {
-  "name": "global-actions-support",
+  "name": "manage-files-in-multiple-repositories",
   "version": "0.5.0",
-  "description": "This action introduces support for global workflows. Global workflows are the one you update in just one repo and they are automatically updated in other repositories.",
+  "description": "This action enables you to copy/update/remove files from one repo to multiple other repos automatically in one shot.",
   "main": "lib/index.js",
   "scripts": {
     "start": "rimraf ./clones && node lib/index.js",
@@ -19,14 +19,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/derberg/global-actions-support.git"
+    "url": "git+https://github.com/derberg/manage-files-in-multiple-repositories.git"
   },
   "author": "Lukasz Gornicki <lpgornicki@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/derberg/global-actions-support/issues"
+    "url": "https://github.com/derberg/manage-files-in-multiple-repositories/issues"
   },
-  "homepage": "https://github.com/derberg/global-actions-support#readme",
+  "homepage": "https://github.com/derberg/manage-files-in-multiple-repositories#readme",
   "dependencies": {
     "@actions/core": "^1.2.6",
     "@actions/github": "^4.0.0",

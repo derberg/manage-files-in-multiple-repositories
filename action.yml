@@ -1,5 +1,5 @@
-name: Copy Files to Other Repositories
-description: This action enables you to copy/replicate from one repo to another automatically.
+name: Manage Files in Multiple Repositories
+description: This action enables you to copy/update/remove files from one repo to multiple other repos automatically in one shot.
 inputs:
   github_token:
     description: >
@@ -28,12 +28,19 @@ inputs:
   patterns_to_ignore:
     description: >
       Comma-separated list of file paths or directories that should be handled by this action and updated in other repositories.
-      This option is useful if you use "patterns_to_include" with large amount of files, and some of them you want to ignore.
+      This option is useful if you use "patterns_to_include" or "patterns_to_remove" with large amount of files, and some of them you want to ignore.
       In the format `./github/workflows/another_file.yml`.
+    required: true
+  patterns_to_remove:
+    description: >
+      Comma-separated list of file paths or directories that should be handled by this action and removed from other repositories. This option do not perform any removal of files that are located in repository there this action is used.
+      This option cannot be used at the same time with "patterns_to_include", these fields are mutually exclusive.
+      In the format `./github/workflows`.
     required: true
   patterns_to_include:
     description: >
-      Comma-separated list of file paths or directories that should be handled by this action and updated in other repositories.
+      Comma-separated list of file paths or directories that should be handled by this action and copied or updated in other repositories.
+      This option cannot be used at the same time with "patterns_to_remove", these fields are mutually exclusive.
       In the format `.github/workflows`.
     required: true  
   repos_to_ignore:
@@ -66,10 +73,10 @@ inputs:
     required: false
   destination:
     description: >
-      Name of the directory where all files matching "patterns_to_include" will be copied. In the format `.github/workflows`.
+      Name of the directory where all files matching "patterns_to_include" will be copied. It doesn't work with "patterns_to_remove". In the format `.github/workflows`.
     required: false
 runs:
-  using: node12
+  using: node16
   main: dist/index.js
 branding:
   icon: compass
