@@ -8039,7 +8039,8 @@ async function push(branchName, message, committerUsername, committerEmail, git)
       await git.pull(['--rebase', REMOTE, branchName]);
     } catch (error) {
       core.info('Not able to pull:', error);
-      await git.merge(['--strategy-option=ours', branchName]);
+      await git.merge(['-X', 'ours', branchName]);
+      await git.add('./*');
       await git.push(['-u', REMOTE, branchName]);
     }
   }
