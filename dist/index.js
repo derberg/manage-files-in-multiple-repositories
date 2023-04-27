@@ -8032,9 +8032,18 @@ async function push(branchName, message, committerUsername, committerEmail, git)
   await git.addConfig('user.name', committerUsername);
   await git.addConfig('user.email', committerEmail);
   await git.commit(message);
-  await git.pull(REMOTE, branchName);
-  await git.merge();
-  await git.push(['-u', REMOTE, branchName]);
+  try {
+    await git.push(['-u', REMOTE, branchName]);
+  } catch (error) {
+    core.info('Not able to push:', error);
+    try {
+      await git.pull(REMOTE, branchName);
+    } catch (error) {
+      core.info('Not able to pull:', error);
+      await git.merge(['--strategy-option=ours', branchName]);
+      await git.push(['-u', REMOTE, branchName]);
+    }
+  }
 }
 
 async function areFilesChanged(git) {
