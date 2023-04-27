@@ -8035,14 +8035,10 @@ async function push(branchName, message, committerUsername, committerEmail, git)
     await git.push(['-u', REMOTE, branchName]);
   } catch (error) {
     core.info('Not able to push:', error);
-    core.debug('DEBUG: Git status after push issues');
-    core.debug(JSON.stringify(await git.status(), null, 2));
     try {
       await git.pull([REMOTE, branchName]);
     } catch (error) {
       core.info('Not able to pull:', error);
-      core.debug('DEBUG: Git status after pull issues');
-      core.debug(JSON.stringify(await git.status(), null, 2));
       await git.merge(['-X', 'ours', branchName]);
       core.debug('DEBUG: Git status after merge');
       core.debug(JSON.stringify(await git.status(), null, 2));
@@ -14429,8 +14425,15 @@ async function run() {
              * 4db. Creating new branch in cloned repo
              */
             const newBranchName = customBranchName || getBranchName(commitId, branchName);
-            await createBranch(newBranchName, git);
-
+            const wasBranchThereAlready = branchesToOperateOn[1].some(branch => branch.name === newBranchName);
+            core.debug(`DEBUG: was branch ${newBranchName} there already in the repository? - ${wasBranchThereAlready}`);
+            core.debug(JSON.stringify(branchesToOperateOn, null, 2));
+            if (wasBranchThereAlready) {
+              await checkoutBranch(newBranchName, git);
+            } else {
+              await createBranch(newBranchName, git);
+            }
+            
             /*
              * 4dc. Files replication/update or deletion
              * it is pretty clear that if there is nothing to replicate, then there definitely is something to remove
@@ -14448,11 +14451,8 @@ async function run() {
               await push(newBranchName, commitMessage, committerUsername, committerEmail, git);
                     
               /*
-               * 4fe. Opening a PR
+               * 4fe. Opening a PR only if needed and there is no branch in place already
                */
-              const wasBranchThereAlready = branchesToOperateOn[1].some(branch => branch.name === newBranchName);
-              core.debug(`DEBUG: was branch ${newBranchName} there already in the repository? - ${wasBranchThereAlready}`);
-              core.debug(JSON.stringify(branchesToOperateOn, null, 2));
               let pullRequestUrl;
               if (!wasBranchThereAlready) pullRequestUrl = await createPr(myOctokit, newBranchName, repo.id, commitMessage, branchName);
                     
@@ -15841,9 +15841,9 @@ async function getBranchesList(octokit, owner, repo, branchesString, defaultBran
   //branches not available an remote will not be included
   const filteredBranches = filterOutMissingBranches(branchesString, branchesFromRemote, defaultBranch);
 
-  core.info(`These is a final list of branches action will operate on: ${JSON.stringify(filteredBranches, null, 2)}`);
+  core.info(`This is a final list of branches action will operate on: ${JSON.stringify(filteredBranches, null, 2)}`);
 
-  return [ filteredBranches, branchesFromRemote];
+  return [filteredBranches, branchesFromRemote];
 }
 
 /**
