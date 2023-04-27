@@ -8032,7 +8032,7 @@ async function push(branchName, message, committerUsername, committerEmail, git)
   await git.addConfig('user.name', committerUsername);
   await git.addConfig('user.email', committerEmail);
   await git.commit(message);
-  await git.push(['-u', '--force', REMOTE, branchName]);
+  await git.push(['-u', '--force-with-lease', REMOTE, branchName]);
 }
 
 async function areFilesChanged(git) {
