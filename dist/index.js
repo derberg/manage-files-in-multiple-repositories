@@ -14392,7 +14392,7 @@ async function run() {
            *     Should it be just default one or the ones provided by the user
            */
           const branchesToOperateOn = await getBranchesList(myOctokit, owner, repo.name, branches, defaultBranch); 
-          if (!branchesToOperateOn.length) {
+          if (!branchesToOperateOn[0].length) {
             core.info('Repo has no branches that the action could operate on');
             continue;
           }
@@ -14400,7 +14400,7 @@ async function run() {
           /*
            * 4d. Per branch operation starts
            */
-          for (const branch of branchesToOperateOn) {
+          for (const branch of branchesToOperateOn[0]) {
             /*
              * 4da. Checkout branch in cloned repo
              */
@@ -14432,7 +14432,7 @@ async function run() {
               /*
                * 4fe. Opening a PR
                */
-              const wasBranchThereAlready = branchesToOperateOn.some(branch => branch.name === newBranchName);
+              const wasBranchThereAlready = branchesToOperateOn[1].some(branch => branch.name === newBranchName);
               core.debug(`DEBUG: was branch ${newBranchName} there already in the repository? - ${wasBranchThereAlready}`);
               core.debug(JSON.stringify(branchesToOperateOn, null, 2));
               let pullRequestUrl;
@@ -15813,7 +15813,7 @@ function getBranchName(commitId, branchName) {
  * @param  {String} repo repo name
  * @param  {String} branchesString comma-separated list of branches
  * @param  {String} defaultBranch name of the repo default branch
- * @returns  {String}
+ * @returns  {Array<Object, Object>} first index is object with branches that user wants to operate on and that are in remote, next index has all remote branches
  */
 async function getBranchesList(octokit, owner, repo, branchesString, defaultBranch) {
   core.info('Getting list of branches the action should operate on');
@@ -15825,7 +15825,7 @@ async function getBranchesList(octokit, owner, repo, branchesString, defaultBran
 
   core.info(`These is a final list of branches action will operate on: ${JSON.stringify(filteredBranches, null, 2)}`);
 
-  return filteredBranches;
+  return [ filteredBranches, branchesFromRemote];
 }
 
 /**
