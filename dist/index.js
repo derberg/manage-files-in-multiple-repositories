@@ -8032,7 +8032,8 @@ async function push(branchName, message, committerUsername, committerEmail, git)
   await git.addConfig('user.name', committerUsername);
   await git.addConfig('user.email', committerEmail);
   await git.commit(message);
-  await git.pull(['--rebase', REMOTE, branchName]);
+  await git.pull(REMOTE, branchName);
+  await git.merge();
   await git.push(['-u', REMOTE, branchName]);
 }
 
