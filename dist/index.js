@@ -8036,7 +8036,7 @@ async function push(branchName, message, committerUsername, committerEmail, git)
   } catch (error) {
     core.info('Not able to push:', error);
     try {
-      await git.pull(REMOTE, branchName);
+      await git.pull(['--rebase', REMOTE, branchName]);
     } catch (error) {
       core.info('Not able to pull:', error);
       await git.merge(['--strategy-option=ours', branchName]);
