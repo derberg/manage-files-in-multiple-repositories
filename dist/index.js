@@ -14299,6 +14299,7 @@ async function run() {
     const commitMessage = core.getInput('commit_message');
     const branches = core.getInput('branches');
     const destination = core.getInput('destination');
+    const customBranchName = core.getInput('bot_branch_name');
     const repoNameManual = eventPayload.inputs && eventPayload.inputs.repo_name;
 
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
@@ -14409,7 +14410,7 @@ async function run() {
             /*
              * 4db. Creating new branch in cloned repo
              */
-            const newBranchName = getBranchName(commitId, branchName);
+            const newBranchName = customBranchName || getBranchName(commitId, branchName);
             await createBranch(newBranchName, git);
 
             /*
