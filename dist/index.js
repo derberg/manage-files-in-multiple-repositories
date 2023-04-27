@@ -14433,7 +14433,7 @@ async function run() {
             } else {
               await createBranch(newBranchName, git);
             }
-            
+
             /*
              * 4dc. Files replication/update or deletion
              * it is pretty clear that if there is nothing to replicate, then there definitely is something to remove
@@ -14451,16 +14451,21 @@ async function run() {
               await push(newBranchName, commitMessage, committerUsername, committerEmail, git);
                     
               /*
-               * 4fe. Opening a PR only if needed and there is no branch in place already
+               * 4fe. Opening a PR. Doing in try/catch as it is not always failing because of timeouts, maybe branch already has a PR
                */
               let pullRequestUrl;
-              if (!wasBranchThereAlready) pullRequestUrl = await createPr(myOctokit, newBranchName, repo.id, commitMessage, branchName);
-                    
+              try {
+                pullRequestUrl = await createPr(myOctokit, newBranchName, repo.id, commitMessage, branchName);
+              } catch (error) {
+                if (wasBranchThereAlready)
+                  core.info(`PR creation for ${repo.name} failed as the branch was there already. Insted only push was performed to existing ${newBranchName} branch`, error);
+              }
+
               core.endGroup();
           
-              if (pullRequestUrl && !wasBranchThereAlready) {
+              if (pullRequestUrl) {
                 core.info(`Workflow finished with success and PR for ${repo.name} is created -> ${pullRequestUrl}`);
-              } else if (wasBranchThereAlready) {
+              } else if (!pullRequestUrl && wasBranchThereAlready) {
                 core.info(`Workflow finished without PR creation for ${repo.name}. Insted push was performed to existing ${newBranchName} branch`);
               } else {
                 core.info(`Unable to create a PR because of timeouts. Create PR manually from the branch ${newBranchName} that was already created in the upstream`);
