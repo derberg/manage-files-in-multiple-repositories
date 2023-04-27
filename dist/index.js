@@ -8028,11 +8028,11 @@ async function getBranchesLocal(git) {
 async function push(branchName, message, committerUsername, committerEmail, git) {
   if (core.isDebug()) __webpack_require__(231).enable('simple-git');
   core.info('Pushing changes to remote');
-  
+  await git.fetch(REMOTE, branchName);
   await git.addConfig('user.name', committerUsername);
   await git.addConfig('user.email', committerEmail);
   await git.commit(message);
-  await git.push(['-u', REMOTE, branchName]);
+  await git.push(['-u', '--force', REMOTE, branchName]);
 }
 
 async function areFilesChanged(git) {
