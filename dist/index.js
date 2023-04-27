@@ -8028,11 +8028,25 @@ async function getBranchesLocal(git) {
 async function push(branchName, message, committerUsername, committerEmail, git) {
   if (core.isDebug()) __webpack_require__(231).enable('simple-git');
   core.info('Pushing changes to remote');
-  
   await git.addConfig('user.name', committerUsername);
   await git.addConfig('user.email', committerEmail);
   await git.commit(message);
-  await git.push(['-u', REMOTE, branchName]);
+  try {
+    await git.push(['-u', REMOTE, branchName]);
+  } catch (error) {
+    core.info('Not able to push:', error);
+    try {
+      await git.pull([REMOTE, branchName]);
+    } catch (error) {
+      core.info('Not able to pull:', error);
+      await git.merge(['-X', 'ours', branchName]);
+      core.debug('DEBUG: Git status after merge');
+      core.debug(JSON.stringify(await git.status(), null, 2));
+      await git.add('./*');
+      await git.commit(message);
+      await git.push(['-u', REMOTE, branchName]);
+    }
+  }
 }
 
 async function areFilesChanged(git) {
@@ -14299,6 +14313,7 @@ async function run() {
     const commitMessage = core.getInput('commit_message');
     const branches = core.getInput('branches');
     const destination = core.getInput('destination');
+    const customBranchName = core.getInput('bot_branch_name');
     const repoNameManual = eventPayload.inputs && eventPayload.inputs.repo_name;
 
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
@@ -14373,7 +14388,7 @@ async function run() {
           /*
            * 4a. Creating folder where repo will be cloned and initializing git client
            */
-          const dir = path.join(process.cwd(), './clones', repo.name);
+          const dir = path.join(process.cwd(), './clones', `${repo.name  }-${ Math.random().toString(36).substring(7)}`);
           await mkdir(dir, {recursive: true});
           const git = simpleGit({baseDir: dir});
 
@@ -14391,7 +14406,7 @@ async function run() {
            *     Should it be just default one or the ones provided by the user
            */
           const branchesToOperateOn = await getBranchesList(myOctokit, owner, repo.name, branches, defaultBranch); 
-          if (!branchesToOperateOn.length) {
+          if (!branchesToOperateOn[0].length) {
             core.info('Repo has no branches that the action could operate on');
             continue;
           }
@@ -14399,7 +14414,7 @@ async function run() {
           /*
            * 4d. Per branch operation starts
            */
-          for (const branch of branchesToOperateOn) {
+          for (const branch of branchesToOperateOn[0]) {
             /*
              * 4da. Checkout branch in cloned repo
              */
@@ -14409,8 +14424,15 @@ async function run() {
             /*
              * 4db. Creating new branch in cloned repo
              */
-            const newBranchName = getBranchName(commitId, branchName);
-            await createBranch(newBranchName, git);
+            const newBranchName = customBranchName || getBranchName(commitId, branchName);
+            const wasBranchThereAlready = branchesToOperateOn[1].some(branch => branch.name === newBranchName);
+            core.debug(`DEBUG: was branch ${newBranchName} there already in the repository? - ${wasBranchThereAlready}`);
+            core.debug(JSON.stringify(branchesToOperateOn, null, 2));
+            if (wasBranchThereAlready) {
+              await checkoutBranch(newBranchName, git);
+            } else {
+              await createBranch(newBranchName, git);
+            }
 
             /*
              * 4dc. Files replication/update or deletion
@@ -14429,14 +14451,23 @@ async function run() {
               await push(newBranchName, commitMessage, committerUsername, committerEmail, git);
                     
               /*
-               * 4fe. Opening a PR
-               */  
-              const pullRequestUrl = await createPr(myOctokit, newBranchName, repo.id, commitMessage, branchName);
-                    
+               * 4fe. Opening a PR. Doing in try/catch as it is not always failing because of timeouts, maybe branch already has a PR
+               * we need to try to create a PR cause there can be branch but someone closed PR, so branch is there but PR not
+               */
+              let pullRequestUrl;
+              try {
+                pullRequestUrl = await createPr(myOctokit, newBranchName, repo.id, commitMessage, branchName);
+              } catch (error) {
+                if (wasBranchThereAlready)
+                  core.info(`PR creation for ${repo.name} failed as the branch was there already. Insted only push was performed to existing ${newBranchName} branch`, error);
+              }
+
               core.endGroup();
           
               if (pullRequestUrl) {
                 core.info(`Workflow finished with success and PR for ${repo.name} is created -> ${pullRequestUrl}`);
+              } else if (!pullRequestUrl && wasBranchThereAlready) {
+                core.info(`Workflow finished without PR creation for ${repo.name}. Insted push was performed to existing ${newBranchName} branch`);
               } else {
                 core.info(`Unable to create a PR because of timeouts. Create PR manually from the branch ${newBranchName} that was already created in the upstream`);
               }
@@ -15806,7 +15837,7 @@ function getBranchName(commitId, branchName) {
  * @param  {String} repo repo name
  * @param  {String} branchesString comma-separated list of branches
  * @param  {String} defaultBranch name of the repo default branch
- * @returns  {String}
+ * @returns  {Array<Object, Object>} first index is object with branches that user wants to operate on and that are in remote, next index has all remote branches
  */
 async function getBranchesList(octokit, owner, repo, branchesString, defaultBranch) {
   core.info('Getting list of branches the action should operate on');
@@ -15816,9 +15847,9 @@ async function getBranchesList(octokit, owner, repo, branchesString, defaultBran
   //branches not available an remote will not be included
   const filteredBranches = filterOutMissingBranches(branchesString, branchesFromRemote, defaultBranch);
 
-  core.info(`These is a final list of branches action will operate on: ${JSON.stringify(filteredBranches, null, 2)}`);
+  core.info(`This is a final list of branches action will operate on: ${JSON.stringify(filteredBranches, null, 2)}`);
 
-  return filteredBranches;
+  return [filteredBranches, branchesFromRemote];
 }
 
 /**
