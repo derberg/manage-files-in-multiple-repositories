@@ -28,7 +28,7 @@
   },
   "homepage": "https://github.com/derberg/manage-files-in-multiple-repositories#readme",
   "dependencies": {
-    "@actions/core": "^1.2.6",
+    "@actions/core": "^1.9.1",
     "@actions/github": "^4.0.0",
     "@octokit/plugin-retry": "^3.0.6",
     "debug": "^4.3.1",
