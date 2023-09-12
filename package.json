@@ -34,7 +34,7 @@
     "debug": "^4.3.1",
     "fs-extra": "^9.0.1",
     "markdown-toc": "^1.2.0",
-    "simple-git": "^2.48.0"
+    "simple-git": "^3.16.0"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.23.0",
