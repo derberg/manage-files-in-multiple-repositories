@@ -6,13 +6,29 @@
 
 const core = __nccwpck_require__(7484);
 
-module.exports = { getCommitFiles, getReposList, createPr, getRepo, getBranchesRemote };
+module.exports = { getCommitFiles, getPushFiles, getReposList, createPr, getRepo, getBranchesRemote };
 
 async function getCommitFiles(octokit, commitId, owner, repo) {
   const { data: { files } } = await octokit.repos.getCommit({
     owner,
     repo,
     ref: commitId
+  });
+
+  return files;
+}
+
+async function getPushFiles(octokit, before, after, owner, repo) {
+  // GitHub uses an all-zero before SHA when a branch is created, so there is no range to compare.
+  if (!before || (/^0+$/).test(before)) {
+    return getCommitFiles(octokit, after, owner, repo);
+  }
+
+  const { data: { files } } = await octokit.repos.compareCommits({
+    owner,
+    repo,
+    base: before,
+    head: after
   });
 
   return files;
@@ -264,7 +280,7 @@ const { copy, remove } = __nccwpck_require__(2136);
 const { readdir, stat } = (__nccwpck_require__(9896).promises);
 const path = __nccwpck_require__(6928);
 const core = __nccwpck_require__(7484);
-const { getCommitFiles, getBranchesRemote } = __nccwpck_require__(9580);
+const { getPushFiles, getBranchesRemote } = __nccwpck_require__(9580);
 
 module.exports = { copyChangedFiles, parseCommaList, getListOfReposToIgnore, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl, isInitialized, getBranchesList, filterOutMissingBranches, filterOutFiles, getFilteredFilesList, getFileName, removeFiles, getFiles, cleanupClone };
 
@@ -287,7 +303,7 @@ async function cleanupClone(dir, repoName) {
 
 /**
  * @param  {Object} octokit GitHub API client instance
- * @param  {Object} commitId Id of the commit to check for files changes
+ * @param  {Object} pushRange before and after commit ids for the push
  * @param  {String} owner org or user name
  * @param  {String} repo repo name
  * @param  {String} patternsToIgnore comma-separated list of file paths or directories that should be ignored
@@ -296,20 +312,20 @@ async function cleanupClone(dir, repoName) {
  * 
  * @returns {Object<Array<String>>} list of filepaths of modified files
  */
-async function getListOfFilesToReplicate(octokit, commitId, owner, repo, patternsToIgnore, patternsToInclude, triggerEventName) {
+async function getListOfFilesToReplicate(octokit, pushRange, owner, repo, patternsToIgnore, patternsToInclude, triggerEventName) {
   let filesToCheckForReplication;
   let filesToCheckForRemoval;
 
   core.startGroup('Getting list of workflow files that need to be replicated in other repositories');
 
   if (triggerEventName === 'push') {
-    const commitFiles = await getCommitFiles(octokit, commitId, owner, repo);
-    core.debug(`DEBUG: list of files modified in commit ${commitId}. Full response from API:`);
-    core.debug(JSON.stringify(commitFiles, null, 2));
+    const pushFiles = await getPushFiles(octokit, pushRange.before, pushRange.after, owner, repo);
+    core.debug(`DEBUG: list of files modified in push ${pushRange.before}...${pushRange.after}. Full response from API:`);
+    core.debug(JSON.stringify(pushFiles, null, 2));
     //filtering out files that show in commit as removed
-    filesToCheckForReplication = getFiles(commitFiles, false);
+    filesToCheckForReplication = getFiles(pushFiles, false);
     //remember files that show in commit as removed
-    filesToCheckForRemoval = getFiles(commitFiles, true);
+    filesToCheckForRemoval = getFiles(pushFiles, true);
   }
 
   if (triggerEventName === 'workflow_dispatch') {
@@ -17470,9 +17486,10 @@ async function run() {
       previews: ['mercy-preview'],
     }));
 
-    //Id of commit can be taken only from push event, not workflow_dispatch
-    //TODO for now this action is hardcoded to always get commit id of the first commit on the list
-    const commitId = triggerEventName === 'push' ? eventPayload.commits[0].id : '';
+    const pushRange = isPush ? {
+      before: eventPayload.before,
+      after: eventPayload.after
+    } : {};
 
     if (patternsToRemove && patternsToInclude) {
       core.setFailed('Fields patterns_to_include and patterns_to_remove are mutually exclusive. If you want to remove files from repos then do not use patterns_to_include.');
@@ -17490,7 +17507,7 @@ async function run() {
     let filesToReplicate;
     let filesToRemove;
     if (!patternsToRemove) {
-      filesToCheckForReplication = await getListOfFilesToReplicate(myOctokit, commitId, owner, repo, patternsToIgnore, patternsToInclude, triggerEventName);
+      filesToCheckForReplication = await getListOfFilesToReplicate(myOctokit, pushRange, owner, repo, patternsToIgnore, patternsToInclude, triggerEventName);
       filesToReplicate = filesToCheckForReplication.filesForReplication;
       filesToRemove = filesToCheckForReplication.filesForRemoval;
       //if no files need replication, we just need to stop the workflow from further execution
@@ -17571,7 +17588,7 @@ async function run() {
             /*
              * 4db. Creating new branch in cloned repo
              */
-            const newBranchName = customBranchName || getBranchName(commitId, branchName);
+            const newBranchName = customBranchName || getBranchName(pushRange.after || '', branchName);
             const wasBranchThereAlready = branchesToOperateOn[1].some(branch => branch.name === newBranchName);
             core.debug(`DEBUG: was branch ${newBranchName} there already in the repository? - ${wasBranchThereAlready}`);
             core.debug(JSON.stringify(branchesToOperateOn, null, 2));
