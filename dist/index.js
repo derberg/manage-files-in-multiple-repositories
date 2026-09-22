@@ -266,7 +266,24 @@ const path = __nccwpck_require__(6928);
 const core = __nccwpck_require__(7484);
 const { getCommitFiles, getBranchesRemote } = __nccwpck_require__(9580);
 
-module.exports = { copyChangedFiles, parseCommaList, getListOfReposToIgnore, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl, isInitialized, getBranchesList, filterOutMissingBranches, filterOutFiles, getFilteredFilesList, getFileName, removeFiles, getFiles };
+module.exports = { copyChangedFiles, parseCommaList, getListOfReposToIgnore, getBranchName, getListOfFilesToReplicate, getAuthanticatedUrl, isInitialized, getBranchesList, filterOutMissingBranches, filterOutFiles, getFilteredFilesList, getFileName, removeFiles, getFiles, cleanupClone };
+
+/**
+ * Removes a temporary repository clone without interrupting the remaining repositories if cleanup fails.
+ *
+ * @param {String} dir path to the temporary clone
+ * @param {String} repoName repository name used in log messages
+ */
+async function cleanupClone(dir, repoName) {
+  if (!dir) return;
+
+  try {
+    await remove(dir);
+    core.info(`Removed temporary clone for ${repoName}.`);
+  } catch (error) {
+    core.warning(`Failed to remove temporary clone for ${repoName}: ${error}`);
+  }
+}
 
 /**
  * @param  {Object} octokit GitHub API client instance
@@ -653,6 +670,7 @@ function getFiles(filesList, removed) {
     .filter(fileObj => removed ? fileObj.status === 'removed' : fileObj.status !== 'removed')
     .map(nonRemovedFile => nonRemovedFile.filename);
 }
+
 
 /***/ }),
 
@@ -17410,7 +17428,7 @@ const { GitHub, getOctokitOptions } = __nccwpck_require__(8006);
 
 const { createBranch, clone, push, areFilesChanged, getBranchesLocal, checkoutBranch } = __nccwpck_require__(9412);
 const { getReposList, createPr, getRepo } = __nccwpck_require__(9580);
-const { getListOfFilesToReplicate, copyChangedFiles, getListOfReposToIgnore, getBranchName, isInitialized, getBranchesList, removeFiles } = __nccwpck_require__(9277);
+const { getListOfFilesToReplicate, copyChangedFiles, getListOfReposToIgnore, getBranchName, isInitialized, getBranchesList, removeFiles, cleanupClone } = __nccwpck_require__(9277);
 
 const triggerEventName = process.env.GITHUB_EVENT_NAME;
 const eventPayload = require(process.env.GITHUB_EVENT_PATH);
@@ -17507,6 +17525,7 @@ async function run() {
      * 4. Management of files in selected repos starts one by one
      */
     for (const repo of reposList) {
+      let dir;
       try {
         //start only if repo not on list of ignored
         if (!ignoredRepositories.includes(repo.name)) {        
@@ -17516,7 +17535,7 @@ async function run() {
           /*
            * 4a. Creating folder where repo will be cloned and initializing git client
            */
-          const dir = path.join(process.cwd(), './clones', `${repo.name  }-${ Math.random().toString(36).substring(7)}`);
+          dir = path.join(process.cwd(), './clones', `${repo.name  }-${ Math.random().toString(36).substring(7)}`);
           await mkdir(dir, {recursive: true});
           const git = simpleGit({baseDir: dir});
 
@@ -17615,6 +17634,8 @@ async function run() {
         core.endGroup();
         core.warning(`Failed replicating files for this repo: ${error}`);
         continue;
+      } finally {
+        await cleanupClone(dir, repo.name);
       }
     }
   } catch (error) {
