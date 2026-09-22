@@ -79,6 +79,7 @@ exclude_forked | Boolean value on whether to exclude forked repositories from th
 branches | By default, action creates branch from default branch and opens PR only against default branch. With this property you can override this behaviour. You can provide a comma-separated list of branches this action shoudl work against. You can also provide regex, but without comma as list of branches is split in code by comma. | false | default branch is used
 destination | Name of the directory where all files matching "patterns_to_include" will be copied. It doesn't work with "patterns_to_remove". In the format `.github/workflows`. | false | -
 bot_branch_name | Use it if you do not want this action to create a new branch and new pull request with every run. By default branch names are generated. This means every single change is a separate commit. Such a static hardcoded branch name has an advantage that if you make a lot of changes, instead of having 5 PRs merged with 5 commits, you get one PR that is updated with new changes as long as the PR is not yet merged. If you use static name, and by mistake someone closed a PR, without merging and removing branch, this action will not fail but update the branch and open a new PR. Example value that you could provide: `bot_branch_name: bot/update-files-from-global-repo` | false | -
+sleep_pr_creation | Sleep time in seconds between processing each pull request. Useful to avoid overwhelming CI/CD pipelines with too many PRs created at once. Set to 0 to disable sleep. | false | 0
 
 ## Pin the Action to a Commit SHA
 
