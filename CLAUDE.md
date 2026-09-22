@@ -35,9 +35,18 @@ It should reach `Input required and not supplied: github_token`. That is the exp
 Releases are manual and there is no workflow for them. Tag the point release and move the floating major, because the README tells users to reference `@v3`:
 
 ```bash
-git tag v3.0.1 && git push origin v3.0.1
+git tag v3.1.1 && git push origin v3.1.1
 git tag -f v3  && git push -f origin v3
-gh release create v3.0.1 --title v3.0.1 --notes "..."
+gh release create v3.1.1 --title v3.1.1 --notes "..."
+gh release edit v3 --notes "Exactly the same stuff as in <link to the point release>" --latest
+```
+
+Moving the `v3` tag is not the whole job. A GitHub release named `v3` also exists, and its body keeps naming the old point release until you edit it. Pass `--latest` so the floating release stays the one GitHub shows first.
+
+Before you tag, check that the committed bundle really came from the source:
+
+```bash
+npm run package && git diff --quiet dist/ && echo "dist matches lib"
 ```
 
 Bump the major version when `runs.using` changes. Each Node runtime has a minimum self-hosted runner version, so a runtime bump breaks anyone running an older runner.
