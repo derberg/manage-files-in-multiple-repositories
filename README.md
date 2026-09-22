@@ -16,7 +16,9 @@ If you used `Copy Files to Other Repositories` action before it became `Manage F
 - [Supported Event Triggers](#supported-event-triggers)
 - [Action Flow](#action-flow)
 - [Configuration](#configuration)
+- [Pin the Action to a Commit SHA](#pin-the-action-to-a-commit-sha)
 - [Examples](#examples)
+  * [Minimum Workflow to Remove a File from Other Repos](#minimum-workflow-to-remove-a-file-from-other-repos)
   * [Minimum Workflow to Support Only Workflows Replication](#minimum-workflow-to-support-only-workflows-replication)
   * [Advanced Workflow](#advanced-workflow)
   * [Super Advanced Workflow](#super-advanced-workflow)
@@ -78,6 +80,20 @@ branches | By default, action creates branch from default branch and opens PR on
 destination | Name of the directory where all files matching "patterns_to_include" will be copied. It doesn't work with "patterns_to_remove". In the format `.github/workflows`. | false | -
 bot_branch_name | Use it if you do not want this action to create a new branch and new pull request with every run. By default branch names are generated. This means every single change is a separate commit. Such a static hardcoded branch name has an advantage that if you make a lot of changes, instead of having 5 PRs merged with 5 commits, you get one PR that is updated with new changes as long as the PR is not yet merged. If you use static name, and by mistake someone closed a PR, without merging and removing branch, this action will not fail but update the branch and open a new PR. Example value that you could provide: `bot_branch_name: bot/update-files-from-global-repo` | false | -
 
+## Pin the Action to a Commit SHA
+
+The examples below use `@v3` because it reads well. For real workflows, pin to a full commit SHA instead:
+
+```yml
+- uses: derberg/manage-files-in-multiple-repositories@7fc5b0d6f38446c95261b04d40dc0edf95026f27 # v3.0.0
+```
+
+A tag is only a pointer. Anyone who can push to this repository can retag `v3` to point at different code. Your workflow would then run that code on the next trigger, with no change on your side. A commit SHA cannot move.
+
+This matters more here than for most actions, because you hand this one a personal access token with `repo` and `workflow` scopes. A bad version reaches every repository the token can push to.
+
+Keep the trailing version comment so the line stays readable. Dependabot updates the SHA and the comment together. The same advice applies to every other action you use.
+
 ## Examples
 
 ### Minimum Workflow to Remove a File from Other Repos
@@ -102,7 +118,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: derberg/manage-files-in-multiple-repositories@v2
+      - uses: derberg/manage-files-in-multiple-repositories@v3
         with:
           github_token: ${{ secrets.CUSTOM_TOKEN }}
           #you must specify what pattern to include otherwise all files from the repository will be replicated 
@@ -132,7 +148,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: derberg/manage-files-in-multiple-repositories@v2
+      - uses: derberg/manage-files-in-multiple-repositories@v3
         with:
           github_token: ${{ secrets.CUSTOM_TOKEN }}
           #you must specify what pattern to include otherwise all files from the repository will be replicated 
@@ -161,7 +177,7 @@ jobs:
             - name: Checkout repository
               uses: actions/checkout@v3
             - name: Replicating global workflow
-              uses: derberg/manage-files-in-multiple-repositories@v2
+              uses: derberg/manage-files-in-multiple-repositories@v3
               with:
                 github_token: ${{ secrets.CUSTOM_TOKEN }}
                 patterns_to_ignore: '.github/workflows/name_of_file_where_this_action_is_used.yml'
@@ -246,7 +262,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Replicating file
-        uses: derberg/manage-files-in-multiple-repositories@v2
+        uses: derberg/manage-files-in-multiple-repositories@v3
         with:
           github_token: ${{ secrets.GH_TOKEN }}
           patterns_to_include: CODE_OF_CONDUCT.md
@@ -262,7 +278,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Replicating file
-        uses: derberg/manage-files-in-multiple-repositories@v2
+        uses: derberg/manage-files-in-multiple-repositories@v3
         with:
           github_token: ${{ secrets.GH_TOKEN }}
           patterns_to_include: CONTRIBUTING.md
@@ -278,7 +294,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Replicating file
-        uses: derberg/manage-files-in-multiple-repositories@v2
+        uses: derberg/manage-files-in-multiple-repositories@v3
         with:
           github_token: ${{ secrets.GH_TOKEN }}
           patterns_to_include: .github/workflows/if-go-pr-testing.yml
@@ -294,7 +310,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Replicating file
-        uses: derberg/manage-files-in-multiple-repositories@v2
+        uses: derberg/manage-files-in-multiple-repositories@v3
         with:
           github_token: ${{ secrets.GH_TOKEN }}
           patterns_to_include: .github/workflows/if-nodejs-pr-testing.yml,.github/workflows/if-nodejs-release.yml,.github/workflows/if-nodejs-version-bump.yml,.github/workflows/bump.yml
@@ -310,7 +326,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Replicating file
-        uses: derberg/manage-files-in-multiple-repositories@v2
+        uses: derberg/manage-files-in-multiple-repositories@v3
         with:
           github_token: ${{ secrets.GH_TOKEN }}
           patterns_to_include: .github/workflows/automerge-for-humans-add-ready-to-merge-or-do-not-merge-label.yml,.github/workflows/add-good-first-issue-labels.yml,.github/workflows/automerge-for-humans-merging.yml,.github/workflows/automerge-for-humans-remove-ready-to-merge-label-on-edit.yml,.github/workflows/automerge-orphans.yml,.github/workflows/automerge.yml,.github/workflows/autoupdate.yml,.github/workflows/help-command.yml,.github/workflows/issues-prs-notifications.yml,.github/workflows/lint-pr-title.yml,.github/workflows/notify-tsc-members-mention.yml,.github/workflows/sentiment-analysis.yml,.github/workflows/stale-issues-prs.yml,.github/workflows/welcome-first-time-contrib.yml,.github/workflows/release-announcements.yml,
